@@ -111,6 +111,10 @@ button{
 Server-side FFmpeg test
 </p>
 
+<button onclick="openGoogleDrivePicker()">
+  Import Video from Google Drive
+</button>
+
 <input id="video" type="file" accept="video/*">
 
 <button onclick="convertVideo()">
