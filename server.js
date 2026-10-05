@@ -125,7 +125,65 @@ Convert to 144p MPEG-4
 
 </div>
 
+<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://apis.google.com/js/api.js"></script>
+
 <script>
+const GOOGLE_CLIENT_ID = "54132452919-5s9v4pkqj9bidkvkbr0ot2rbjvkm82oo.apps.googleusercontent.com";
+const GOOGLE_API_KEY = "AIzaSyBdPEvU-VFi758txglD485239hoA6Lwgsc";
+
+let pickerTokenClient;
+let pickerAccessToken = null;
+
+function openGoogleDrivePicker() {
+
+  pickerTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: "https://www.googleapis.com/auth/drive.file",
+
+    callback: (response) => {
+
+      if (response.error) {
+        alert("Google authorization failed.");
+        return;
+      }
+
+      pickerAccessToken = response.access_token;
+
+      gapi.load("picker", () => {
+
+        const picker = new google.picker.PickerBuilder()
+          .setDeveloperKey(GOOGLE_API_KEY)
+          .setOAuthToken(pickerAccessToken)
+          .addView(google.picker.ViewId.VIDEO)
+          .setCallback(pickerCallback)
+          .build();
+
+        picker.setVisible(true);
+
+      });
+
+    }
+  });
+
+  pickerTokenClient.requestAccessToken({
+    prompt: "select_account"
+  });
+}
+
+function pickerCallback(data) {
+
+  if (data.action === google.picker.Action.PICKED) {
+
+    const file = data.docs[0];
+
+    document.getElementById("status").textContent =
+      "Selected from Google Drive:\n" + file.name;
+
+    console.log("Selected Drive file:", file);
+  }
+
+}
 
 async function convertVideo(){
 
