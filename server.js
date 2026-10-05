@@ -185,18 +185,68 @@ const statusBox =
   document.getElementById("status");
 
 // add start now 2
-const startTestButton =
-  document.getElementById("startTestButton");
-
-const startTestStatus =
-  document.getElementById("startTestStatus");
-
 startTestButton.addEventListener(
   "click",
-  function () {
+  async function () {
+
+    startTestButton.disabled = true;
 
     startTestStatus.textContent =
-      "BUTTON CLICK WORKING";
+      "Checking server...";
+
+    try {
+
+      const response =
+        await fetch(
+          "/health?starttest=" +
+          Date.now(),
+          {
+            method: "GET",
+            cache: "no-store"
+          }
+        );
+
+      if (!response.ok) {
+
+        throw new Error(
+          "Server returned HTTP " +
+          response.status
+        );
+
+      }
+
+      const result =
+        await response.json();
+
+      startTestStatus.textContent =
+        "SERVER CHECK PASSED\n\n" +
+        "Server is ready.";
+
+      console.log(
+        "Health response:",
+        result
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "Server check failed:",
+        error
+      );
+
+      startTestStatus.textContent =
+        "SERVER CHECK FAILED\n\n" +
+        error.message;
+
+    }
+
+    finally {
+
+      startTestButton.disabled = false;
+
+    }
 
   }
 );
