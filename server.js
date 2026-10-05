@@ -141,7 +141,7 @@ Convert Local Video
 </button>
 
 <div id="status">
-Ready.
+Ready For Convert V1
 
 Select a video to begin.
 </div>
@@ -162,6 +162,18 @@ const convertButton =
 const statusBox =
   document.getElementById("status");
 
+const urlParams =
+  new URLSearchParams(window.location.search);
+
+if (
+  urlParams.get("version") === "2"
+) {
+
+  statusBox.textContent =
+    "Ready For Convert V2\n\n" +
+    "Select a video to begin.";
+
+}
 
 // --------------------------------------------------
 // Background server warm-up
@@ -380,13 +392,14 @@ convertButton.addEventListener(
       await delay(2000);
 
 
-      // Reload the page.
-      // The user will need to select the video again.
+      // --------------------------------------------
+      // Reload as Version 2
+      // --------------------------------------------
 
-      window.location.reload();
+      window.location.href =
+        "/?version=2";
 
     }
-
 
   }
 );
