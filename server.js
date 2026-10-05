@@ -190,18 +190,27 @@ startTestButton.addEventListener(
   function () {
 
     startTestStatus.textContent =
-      "FETCH TEST STARTING";
+      "READING SERVER RESPONSE";
 
     fetch("/health")
       .then(
         function (response) {
 
+          return response.json();
+
+        }
+      )
+      .then(
+        function (result) {
+
           startTestStatus.textContent =
-            "FETCH REQUEST WORKING";
+            "SERVER CHECK PASSED\n\n" +
+            "Status: " +
+            result.status;
 
           console.log(
-            "Health response status:",
-            response.status
+            "Health result:",
+            result
           );
 
         }
@@ -210,10 +219,11 @@ startTestButton.addEventListener(
         function (error) {
 
           startTestStatus.textContent =
-            "FETCH REQUEST FAILED";
+            "SERVER CHECK FAILED\n\n" +
+            error.message;
 
           console.error(
-            "Fetch error:",
+            "Health check error:",
             error
           );
 
