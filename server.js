@@ -9,6 +9,13 @@ const app = express();
 
 const PORT = process.env.PORT || 10000;
 
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+
 const UPLOAD_DIR = "/tmp/uploads";
 const OUTPUT_DIR = "/tmp/outputs";
 
