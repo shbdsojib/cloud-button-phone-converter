@@ -190,9 +190,35 @@ startTestButton.addEventListener(
   function () {
 
     startTestStatus.textContent =
-      "BUTTON CLICK WORKING";
+      "FETCH TEST STARTING";
 
-    console.log("TEST STEP 2");
+    fetch("/health")
+      .then(
+        function (response) {
+
+          startTestStatus.textContent =
+            "FETCH REQUEST WORKING";
+
+          console.log(
+            "Health response status:",
+            response.status
+          );
+
+        }
+      )
+      .catch(
+        function (error) {
+
+          startTestStatus.textContent =
+            "FETCH REQUEST FAILED";
+
+          console.error(
+            "Fetch error:",
+            error
+          );
+
+        }
+      );
 
   }
 );
