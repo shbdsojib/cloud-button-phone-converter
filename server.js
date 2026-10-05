@@ -185,18 +185,14 @@ const statusBox =
   document.getElementById("status");
 
 // add start now 2
-const startTestButton =
-  document.getElementById("startTestButton");
-
-const startTestStatus =
-  document.getElementById("startTestStatus");
-
 startTestButton.addEventListener(
   "click",
   function () {
 
     startTestStatus.textContent =
       "BUTTON CLICK WORKING";
+
+    console.log("TEST STEP 2");
 
   }
 );
