@@ -21,24 +21,12 @@ const upload = multer({
   }
 });
 
-
-// --------------------------------------------------
-// Health check
-// --------------------------------------------------
-
 app.get("/health", (req, res) => {
-
   res.status(200).json({
     success: true,
     status: "ready"
   });
-
 });
-
-
-// --------------------------------------------------
-// Homepage
-// --------------------------------------------------
 
 app.get("/", (req, res) => {
 
@@ -208,10 +196,6 @@ async function warmUpServer() {
 
 }
 
-
-// Start background warm-up.
-// This does NOT block the page.
-
 warmUpServer();
 
 
@@ -342,87 +326,16 @@ convertButton.addEventListener(
 
     convertButton.disabled = true;
 
-    let result = null;
-
-    let lastError = null;
-
 
     try {
 
-      // --------------------------------------------
-      // Automatic retry
-      // --------------------------------------------
-
-      for (
-        let attempt = 1;
-        attempt <= 3;
-        attempt++
-      ) {
-
-        try {
-
-          statusBox.textContent =
-            "Uploading and converting video...\\n\\n" +
-
-            "Attempt " +
-            attempt +
-            " of 3.\\n\\n" +
-
-            "Please wait.";
-
-          result =
-            await convertVideo(file);
-
-          break;
-
-        }
-
-        catch (error) {
-
-          lastError = error;
-
-          console.log(
-            "Conversion attempt " +
-            attempt +
-            " failed:",
-            error
-          );
+      statusBox.textContent =
+        "Uploading and converting video...\\n\\n" +
+        "Please wait.";
 
 
-          if (
-            attempt < 3
-          ) {
-
-            statusBox.textContent =
-              "Server connection interrupted.\\n\\n" +
-
-              "Retrying automatically...\\n\\n" +
-
-              "Please wait.";
-
-            await delay(3000);
-
-          }
-
-        }
-
-      }
-
-
-      // --------------------------------------------
-      // Failed after all attempts
-      // --------------------------------------------
-
-      if (!result) {
-
-        throw (
-          lastError ||
-          new Error(
-            "Conversion failed."
-          )
-        );
-
-      }
+      const result =
+        await convertVideo(file);
 
 
       // --------------------------------------------
@@ -446,18 +359,34 @@ convertButton.addEventListener(
 
     catch (error) {
 
+      console.log(
+        "Conversion failed:",
+        error
+      );
+
+
+      // --------------------------------------------
+      // Automatic recovery
+      // --------------------------------------------
+
       statusBox.textContent =
-        "Conversion failed.\\n\\n" +
-        error.message;
+        "First conversion attempt failed.\\n\\n" +
+
+        "Reconnecting...\\n\\n" +
+
+        "The page will reload automatically in 2 seconds.";
+
+
+      await delay(2000);
+
+
+      // Reload the page.
+      // The user will need to select the video again.
+
+      window.location.reload();
 
     }
 
-
-    finally {
-
-      convertButton.disabled = false;
-
-    }
 
   }
 );
@@ -473,7 +402,7 @@ convertButton.addEventListener(
 
 
 // --------------------------------------------------
-// Conversion endpoint
+// Video conversion
 // --------------------------------------------------
 
 app.post(
@@ -696,7 +625,7 @@ app.post(
 
 
 // --------------------------------------------------
-// Download
+// Download converted video
 // --------------------------------------------------
 
 app.get(
