@@ -281,6 +281,89 @@ videoFile.addEventListener(
 // Conversion
 // --------------------------------------------------
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForServer() {
+
+  for (let attempt = 1; attempt <= 15; attempt++) {
+
+    statusBox.textContent =
+      "Starting conversion server...\n\n" +
+      "Please wait. Attempt " +
+      attempt +
+      " of 15.";
+
+    try {
+
+      const response = await fetch(
+        "/health?time=" + Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
+
+      if (response.ok) {
+
+        const data =
+          await response.json();
+
+        if (data.success === true) {
+          return true;
+        }
+
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Server is waking up:",
+        error.message
+      );
+
+    }
+
+    await delay(2000);
+  }
+
+  return false;
+}
+
+
+async function uploadAndConvert(file) {
+
+  const formData = new FormData();
+
+  formData.append(
+    "video",
+    file
+  );
+
+  const response = await fetch(
+    "/convert",
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+
+  if (!response.ok) {
+
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      errorText ||
+      "Conversion failed."
+    );
+
+  }
+
+  return await response.json();
+}
+
+
 convertButton.addEventListener(
   "click",
   async function () {
@@ -302,47 +385,100 @@ convertButton.addEventListener(
 
     convertButton.disabled = true;
 
-    statusBox.textContent =
-      "Uploading video to server...\\n\\n" +
-      "Please wait.";
-
     try {
 
-      const formData =
-        new FormData();
+      // ------------------------------------------
+      // Step 1: Wake Render server
+      // ------------------------------------------
 
-      formData.append(
-        "video",
-        file
-      );
+      const serverReady =
+        await waitForServer();
 
-
-      const response =
-        await fetch(
-          "/convert",
-          {
-            method: "POST",
-            body: formData
-          }
-        );
-
-
-      if (!response.ok) {
-
-        const errorText =
-          await response.text();
+      if (!serverReady) {
 
         throw new Error(
-          errorText ||
-          "Conversion failed."
+          "Conversion server could not be started. Please try again."
         );
 
       }
 
 
-      const result =
-        await response.json();
+      // ------------------------------------------
+      // Step 2: Upload and convert
+      // ------------------------------------------
 
+      statusBox.textContent =
+        "Server is ready.\n\n" +
+        "Uploading video...\n\n" +
+        "Please wait.";
+
+      let result = null;
+
+      let lastError = null;
+
+
+      for (
+        let attempt = 1;
+        attempt <= 3;
+        attempt++
+      ) {
+
+        try {
+
+          statusBox.textContent =
+            "Uploading and converting video...\n\n" +
+            "Attempt " +
+            attempt +
+            " of 3.\n\n" +
+            "Please wait.";
+
+          result =
+            await uploadAndConvert(file);
+
+          break;
+
+        }
+
+        catch (error) {
+
+          lastError = error;
+
+          console.log(
+            "Conversion attempt failed:",
+            error.message
+          );
+
+          if (attempt < 3) {
+
+            statusBox.textContent =
+              "Connection interrupted.\n\n" +
+              "Retrying automatically...\n\n" +
+              "Please wait.";
+
+            await delay(3000);
+
+          }
+
+        }
+
+      }
+
+
+      if (!result) {
+
+        throw (
+          lastError ||
+          new Error(
+            "Conversion failed."
+          )
+        );
+
+      }
+
+
+      // ------------------------------------------
+      // Step 3: Success
+      // ------------------------------------------
 
       statusBox.innerHTML =
         "Conversion completed successfully." +
@@ -356,13 +492,12 @@ convertButton.addEventListener(
 
         "</a>";
 
-
     }
 
     catch (error) {
 
       statusBox.textContent =
-        "Conversion failed.\\n\\n" +
+        "Conversion failed.\n\n" +
         error.message;
 
     }
