@@ -1,4 +1,3 @@
-// version ok
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
@@ -29,7 +28,7 @@ const upload = multer({
 
 app.get("/health", (req, res) => {
 
-  res.json({
+  res.status(200).json({
     success: true,
     status: "ready"
   });
@@ -177,6 +176,46 @@ const statusBox =
 
 
 // --------------------------------------------------
+// Background server warm-up
+// --------------------------------------------------
+
+async function warmUpServer() {
+
+  try {
+
+    await fetch(
+      "/health?warmup=" + Date.now(),
+      {
+        method: "GET",
+        cache: "no-store"
+      }
+    );
+
+    console.log(
+      "Server warm-up request completed."
+    );
+
+  }
+
+  catch (error) {
+
+    console.log(
+      "Background warm-up request:",
+      error.message
+    );
+
+  }
+
+}
+
+
+// Start background warm-up.
+// This does NOT block the page.
+
+warmUpServer();
+
+
+// --------------------------------------------------
 // Delay helper
 // --------------------------------------------------
 
@@ -239,7 +278,7 @@ videoFile.addEventListener(
 
 
 // --------------------------------------------------
-// Upload + conversion request
+// Upload + conversion
 // --------------------------------------------------
 
 async function convertVideo(file) {
@@ -304,6 +343,7 @@ convertButton.addEventListener(
     convertButton.disabled = true;
 
     let result = null;
+
     let lastError = null;
 
 
@@ -370,7 +410,7 @@ convertButton.addEventListener(
 
 
       // --------------------------------------------
-      // All attempts failed
+      // Failed after all attempts
       // --------------------------------------------
 
       if (!result) {
