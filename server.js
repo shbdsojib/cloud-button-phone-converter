@@ -150,7 +150,6 @@ Select a video to begin.
 
 </div>
 
-
 <script>
 
 const videoFile =
@@ -162,18 +161,26 @@ const convertButton =
 const statusBox =
   document.getElementById("status");
 
+
+// --------------------------------------------------
+// Version check
+// --------------------------------------------------
+
 const urlParams =
-  new URLSearchParams(window.location.search);
+  new URLSearchParams(
+    window.location.search
+  );
 
 if (
   urlParams.get("version") === "2"
 ) {
 
   statusBox.textContent =
-    "Ready For Convert V2\n\n" +
+    "Ready For Convert V2\\n\\n" +
     "Select a video to begin.";
 
 }
+
 
 // --------------------------------------------------
 // Background server warm-up
