@@ -496,11 +496,268 @@ convertButton.addEventListener(
 
     catch (error) {
 
+<script>
+
+const videoFile =
+  document.getElementById("videoFile");
+
+const convertButton =
+  document.getElementById("convertButton");
+
+const statusBox =
+  document.getElementById("status");
+
+
+// --------------------------------------------------
+// Page starts normally
+// --------------------------------------------------
+
+convertButton.disabled = false;
+
+statusBox.textContent =
+  "Ready.\n\n" +
+  "Select a video to begin.";
+
+
+// --------------------------------------------------
+// Video selection
+// --------------------------------------------------
+
+videoFile.addEventListener(
+  "change",
+  function () {
+
+    if (
+      !videoFile.files ||
+      !videoFile.files.length
+    ) {
+
+      statusBox.textContent =
+        "No video selected.";
+
+      return;
+
+    }
+
+    const file =
+      videoFile.files[0];
+
+    const sizeMB =
+      (
+        file.size /
+        1024 /
+        1024
+      ).toFixed(2);
+
+    statusBox.textContent =
+      "Video selected successfully.\n\n" +
+
+      "File: " +
+      file.name +
+
+      "\n" +
+
+      "Size: " +
+      sizeMB +
+      " MB\n\n" +
+
+      "Press Convert to start.";
+
+  }
+);
+
+
+// --------------------------------------------------
+// Small delay helper
+// --------------------------------------------------
+
+function delay(ms) {
+
+  return new Promise(
+    resolve =>
+      setTimeout(resolve, ms)
+  );
+
+}
+
+
+// --------------------------------------------------
+// Upload + conversion
+// --------------------------------------------------
+
+async function convertVideo(file) {
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    "video",
+    file
+  );
+
+  const response =
+    await fetch(
+      "/convert",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+
+  if (!response.ok) {
+
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      errorText ||
+      "Server conversion failed."
+    );
+
+  }
+
+  return await response.json();
+
+}
+
+
+// --------------------------------------------------
+// Convert button
+// --------------------------------------------------
+
+convertButton.addEventListener(
+  "click",
+  async function () {
+
+    if (
+      !videoFile.files ||
+      !videoFile.files.length
+    ) {
+
+      statusBox.textContent =
+        "Please select a video first.";
+
+      return;
+
+    }
+
+    const file =
+      videoFile.files[0];
+
+    convertButton.disabled = true;
+
+
+    try {
+
+      let result = null;
+
+      let lastError = null;
+
+
+      // --------------------------------------------
+      // Automatic conversion attempts
+      // --------------------------------------------
+
+      for (
+        let attempt = 1;
+        attempt <= 3;
+        attempt++
+      ) {
+
+        try {
+
+          statusBox.textContent =
+            "Uploading and converting video...\n\n" +
+
+            "Attempt " +
+            attempt +
+            " of 3.\n\n" +
+
+            "Please wait.";
+
+          result =
+            await convertVideo(file);
+
+          break;
+
+        }
+
+        catch (error) {
+
+          lastError = error;
+
+          console.log(
+            "Conversion attempt " +
+            attempt +
+            " failed:",
+            error
+          );
+
+
+          if (
+            attempt < 3
+          ) {
+
+            statusBox.textContent =
+              "Server connection interrupted.\n\n" +
+
+              "Retrying automatically...\n\n" +
+
+              "Please wait.";
+
+            await delay(3000);
+
+          }
+
+        }
+
+      }
+
+
+      // --------------------------------------------
+      // All attempts failed
+      // --------------------------------------------
+
+      if (!result) {
+
+        throw (
+          lastError ||
+          new Error(
+            "Conversion failed."
+          )
+        );
+
+      }
+
+
+      // --------------------------------------------
+      // Success
+      // --------------------------------------------
+
+      statusBox.innerHTML =
+        "Conversion completed successfully." +
+        "<br><br>" +
+
+        '<a href="' +
+        result.downloadUrl +
+        '">' +
+
+        "Download Converted Video" +
+
+        "</a>";
+
+    }
+
+
+    catch (error) {
+
       statusBox.textContent =
         "Conversion failed.\n\n" +
+
         error.message;
 
     }
+
 
     finally {
 
@@ -510,13 +767,6 @@ convertButton.addEventListener(
 
   }
 );
-
-
-// --------------------------------------------------
-// Start
-// --------------------------------------------------
-
-checkServer();
 
 </script>
 
