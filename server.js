@@ -41,6 +41,27 @@ const upload = multer({
   }
 });
 
+app.get("/oauth2callback", async (req, res) => {
+  try {
+    const { code } = req.query;
+
+    if (!code) {
+      return res.status(400).send("Authorization code missing.");
+    }
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    res.send(`
+      <h2>Google Drive Connected Successfully</h2>
+      <p>You can close this page and return to the converter.</p>
+    `);
+  } catch (error) {
+    console.error("OAuth callback error:", error);
+    res.status(500).send("Google authorization failed.");
+  }
+});
+
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
