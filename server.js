@@ -27,10 +27,12 @@ const upload = multer({
 // --------------------------------------------------
 
 app.get("/health", (req, res) => {
+
   res.json({
     success: true,
     status: "ready"
   });
+
 });
 
 
@@ -146,13 +148,14 @@ Target: 144p • MPEG-4 Part 2 • MP4 • 15 FPS • AAC mono 32 kbps
 
 <button
   id="convertButton"
-  disabled
 >
 Convert Local Video
 </button>
 
 <div id="status">
-Checking server...
+Ready.
+
+Select a video to begin.
 </div>
 
 </div>
@@ -173,58 +176,15 @@ const statusBox =
 
 
 // --------------------------------------------------
-// Server check
+// Delay helper
 // --------------------------------------------------
 
-async function checkServer() {
+function delay(ms) {
 
-  statusBox.textContent =
-    "Connecting to conversion server...";
-
-  try {
-
-    const response =
-      await fetch(
-        "/health?time=" + Date.now(),
-        {
-          cache: "no-store"
-        }
-      );
-
-    if (!response.ok) {
-      throw new Error(
-        "Server health check failed."
-      );
-    }
-
-    const data =
-      await response.json();
-
-    if (
-      data.success !== true
-    ) {
-      throw new Error(
-        "Server is not ready."
-      );
-    }
-
-    convertButton.disabled = false;
-
-    statusBox.textContent =
-      "Server Ready.\\n\\n" +
-      "Select a video to begin.";
-
-  }
-
-  catch (error) {
-
-    statusBox.textContent =
-      "Server connection failed.\\n\\n" +
-      error.message;
-
-    convertButton.disabled = true;
-
-  }
+  return new Promise(
+    resolve =>
+      setTimeout(resolve, ms)
+  );
 
 }
 
@@ -278,311 +238,7 @@ videoFile.addEventListener(
 
 
 // --------------------------------------------------
-// Conversion
-// --------------------------------------------------
-
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function waitForServer() {
-
-  for (let attempt = 1; attempt <= 15; attempt++) {
-
-    statusBox.textContent =
-      "Starting conversion server...\n\n" +
-      "Please wait. Attempt " +
-      attempt +
-      " of 15.";
-
-    try {
-
-      const response = await fetch(
-        "/health?time=" + Date.now(),
-        {
-          cache: "no-store"
-        }
-      );
-
-      if (response.ok) {
-
-        const data =
-          await response.json();
-
-        if (data.success === true) {
-          return true;
-        }
-
-      }
-
-    } catch (error) {
-
-      console.log(
-        "Server is waking up:",
-        error.message
-      );
-
-    }
-
-    await delay(2000);
-  }
-
-  return false;
-}
-
-
-async function uploadAndConvert(file) {
-
-  const formData = new FormData();
-
-  formData.append(
-    "video",
-    file
-  );
-
-  const response = await fetch(
-    "/convert",
-    {
-      method: "POST",
-      body: formData
-    }
-  );
-
-  if (!response.ok) {
-
-    const errorText =
-      await response.text();
-
-    throw new Error(
-      errorText ||
-      "Conversion failed."
-    );
-
-  }
-
-  return await response.json();
-}
-
-
-convertButton.addEventListener(
-  "click",
-  async function () {
-
-    if (
-      !videoFile.files ||
-      !videoFile.files.length
-    ) {
-
-      statusBox.textContent =
-        "Please select a video first.";
-
-      return;
-
-    }
-
-    const file =
-      videoFile.files[0];
-
-    convertButton.disabled = true;
-
-    try {
-
-      // ------------------------------------------
-      // Step 1: Wake Render server
-      // ------------------------------------------
-
-      const serverReady =
-        await waitForServer();
-
-      if (!serverReady) {
-
-        throw new Error(
-          "Conversion server could not be started. Please try again."
-        );
-
-      }
-
-
-      // ------------------------------------------
-      // Step 2: Upload and convert
-      // ------------------------------------------
-
-      statusBox.textContent =
-        "Server is ready.\n\n" +
-        "Uploading video...\n\n" +
-        "Please wait.";
-
-      let result = null;
-
-      let lastError = null;
-
-
-      for (
-        let attempt = 1;
-        attempt <= 3;
-        attempt++
-      ) {
-
-        try {
-
-          statusBox.textContent =
-            "Uploading and converting video...\n\n" +
-            "Attempt " +
-            attempt +
-            " of 3.\n\n" +
-            "Please wait.";
-
-          result =
-            await uploadAndConvert(file);
-
-          break;
-
-        }
-
-        catch (error) {
-
-          lastError = error;
-
-          console.log(
-            "Conversion attempt failed:",
-            error.message
-          );
-
-          if (attempt < 3) {
-
-            statusBox.textContent =
-              "Connection interrupted.\n\n" +
-              "Retrying automatically...\n\n" +
-              "Please wait.";
-
-            await delay(3000);
-
-          }
-
-        }
-
-      }
-
-
-      if (!result) {
-
-        throw (
-          lastError ||
-          new Error(
-            "Conversion failed."
-          )
-        );
-
-      }
-
-
-      // ------------------------------------------
-      // Step 3: Success
-      // ------------------------------------------
-
-      statusBox.innerHTML =
-        "Conversion completed successfully." +
-        "<br><br>" +
-
-        '<a href="' +
-        result.downloadUrl +
-        '">' +
-
-        "Download Converted Video" +
-
-        "</a>";
-
-    }
-
-    catch (error) {
-
-<script>
-
-const videoFile =
-  document.getElementById("videoFile");
-
-const convertButton =
-  document.getElementById("convertButton");
-
-const statusBox =
-  document.getElementById("status");
-
-
-// --------------------------------------------------
-// Page starts normally
-// --------------------------------------------------
-
-convertButton.disabled = false;
-
-statusBox.textContent =
-  "Ready.\n\n" +
-  "Select a video to begin.";
-
-
-// --------------------------------------------------
-// Video selection
-// --------------------------------------------------
-
-videoFile.addEventListener(
-  "change",
-  function () {
-
-    if (
-      !videoFile.files ||
-      !videoFile.files.length
-    ) {
-
-      statusBox.textContent =
-        "No video selected.";
-
-      return;
-
-    }
-
-    const file =
-      videoFile.files[0];
-
-    const sizeMB =
-      (
-        file.size /
-        1024 /
-        1024
-      ).toFixed(2);
-
-    statusBox.textContent =
-      "Video selected successfully.\n\n" +
-
-      "File: " +
-      file.name +
-
-      "\n" +
-
-      "Size: " +
-      sizeMB +
-      " MB\n\n" +
-
-      "Press Convert to start.";
-
-  }
-);
-
-
-// --------------------------------------------------
-// Small delay helper
-// --------------------------------------------------
-
-function delay(ms) {
-
-  return new Promise(
-    resolve =>
-      setTimeout(resolve, ms)
-  );
-
-}
-
-
-// --------------------------------------------------
-// Upload + conversion
+// Upload + conversion request
 // --------------------------------------------------
 
 async function convertVideo(file) {
@@ -646,16 +302,14 @@ convertButton.addEventListener(
 
     convertButton.disabled = true;
 
+    let result = null;
+    let lastError = null;
+
 
     try {
 
-      let result = null;
-
-      let lastError = null;
-
-
       // --------------------------------------------
-      // Automatic conversion attempts
+      // Automatic retry
       // --------------------------------------------
 
       for (
@@ -667,11 +321,11 @@ convertButton.addEventListener(
         try {
 
           statusBox.textContent =
-            "Uploading and converting video...\n\n" +
+            "Uploading and converting video...\\n\\n" +
 
             "Attempt " +
             attempt +
-            " of 3.\n\n" +
+            " of 3.\\n\\n" +
 
             "Please wait.";
 
@@ -699,9 +353,9 @@ convertButton.addEventListener(
           ) {
 
             statusBox.textContent =
-              "Server connection interrupted.\n\n" +
+              "Server connection interrupted.\\n\\n" +
 
-              "Retrying automatically...\n\n" +
+              "Retrying automatically...\\n\\n" +
 
               "Please wait.";
 
@@ -752,8 +406,7 @@ convertButton.addEventListener(
     catch (error) {
 
       statusBox.textContent =
-        "Conversion failed.\n\n" +
-
+        "Conversion failed.\\n\\n" +
         error.message;
 
     }
@@ -791,7 +444,9 @@ app.post(
 
       return res
         .status(400)
-        .send("No video file received.");
+        .send(
+          "No video file received."
+        );
 
     }
 
@@ -820,6 +475,7 @@ app.post(
         OUTPUT_DIR,
         outputName
       );
+
 
     const ffmpegArgs = [
 
@@ -956,6 +612,7 @@ app.post(
 
     }
 
+
     catch (error) {
 
       console.error(
@@ -969,6 +626,7 @@ app.post(
         );
 
     }
+
 
     finally {
 
@@ -1017,6 +675,7 @@ app.get(
         filename
       );
 
+
     if (
       !fs.existsSync(
         filePath
@@ -1030,6 +689,7 @@ app.get(
         );
 
     }
+
 
     res.download(
       filePath,
