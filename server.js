@@ -22,6 +22,18 @@ const OUTPUT_DIR = "/tmp/outputs";
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+app.get("/auth/google", (req, res) => {
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  });
+
+  res.redirect(authUrl);
+});
+
 const upload = multer({
   dest: UPLOAD_DIR,
   limits: {
