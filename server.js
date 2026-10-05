@@ -331,6 +331,64 @@ const convertButton =
 const driveButton =
   document.getElementById("driveButton");
 
+let serverReady = false;
+
+convertButton.disabled = true;
+driveButton.disabled = true;
+
+async function waitForServer() {
+
+  statusBox.textContent =
+    "Connecting to conversion server...\n\n" +
+    "Please wait. Server is starting.";
+
+  for (let attempt = 1; attempt <= 30; attempt++) {
+
+    try {
+
+      const response = await fetch(
+        "/health?check=" + Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
+
+      if (response.ok) {
+
+        serverReady = true;
+
+        convertButton.disabled = false;
+        driveButton.disabled = false;
+
+        statusBox.textContent =
+          "Server Ready.\n\n" +
+          "Select a video to begin.";
+
+        console.log(
+          "Conversion server is ready."
+        );
+
+        return;
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Server is waking up...",
+        attempt
+      );
+
+    }
+
+    await new Promise(
+      resolve => setTimeout(resolve, 2000)
+    );
+  }
+
+  statusBox.textContent =
+    "Server is taking longer than expected.\n\n" +
+    "Please wait a little and try again.";
+}
 
 let pickerApiLoaded = false;
 
@@ -522,6 +580,17 @@ convertButton.addEventListener(
   "click",
   async function () {
 
+    // Wait until the Render server is ready
+    if (!serverReady) {
+
+      statusBox.textContent =
+        "Server is not ready yet.\n\n" +
+        "Please wait a moment and try again.";
+
+      return;
+    }
+
+
     if (
       !videoFile.files ||
       !videoFile.files.length
@@ -543,16 +612,22 @@ convertButton.addEventListener(
 
     try {
 
+      statusBox.textContent =
+        "Uploading video to server...\n\n" +
+        "Please wait.";
+
+
       const result =
         await sendLocalConversion(file);
 
 
       statusBox.innerHTML =
-        "Conversion completed successfully.\\n\\n" +
+        "Conversion completed successfully.<br><br>" +
 
         '<a href="' +
         result.downloadUrl +
-        '">' +
+        '" ' +
+        'style="color:#4ade80;font-size:18px;">' +
 
         "Download Converted Video" +
 
@@ -564,7 +639,7 @@ convertButton.addEventListener(
     catch (error) {
 
       statusBox.textContent =
-        "Conversion failed.\\n\\n" +
+        "Conversion failed.\n\n" +
         error.message;
 
     }
@@ -603,7 +678,7 @@ function loadPickerApi() {
 
 
 loadPickerApi();
-
+waitForServer();
 
 // ======================================================
 // Google Drive button
