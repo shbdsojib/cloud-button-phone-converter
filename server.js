@@ -244,8 +244,8 @@ Cloud Button Phone Video Converter
 Server-side FFmpeg test
 </p>
 
-<button onclick="openGoogleDrivePicker()">
-Import Video from Google Drive
+<button onclick="testGoogleDriveButton()">
+  Import Video from Google Drive
 </button>
 
 <input
@@ -301,6 +301,11 @@ let pickerAccessToken = null;
 /* =========================
    Open Google Drive Picker
    ========================= */
+   
+function testGoogleDriveButton() {
+  document.getElementById("status").textContent =
+    "BUTTON CLICK WORKS";
+}
 
 function openGoogleDrivePicker() {
 
