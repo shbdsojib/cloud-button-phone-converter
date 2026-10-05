@@ -116,6 +116,29 @@ a {
 
 <div class="box">
 
+// add start now 1
+<button
+  id="startTestButton"
+  type="button"
+>
+  Start Now
+</button>
+
+<div
+  id="startTestStatus"
+  style="
+    margin-top:10px;
+    padding:10px;
+    background:#292929;
+    border-radius:8px;
+    white-space:pre-wrap;
+  "
+>
+Ready for Start Now test.
+</div>
+
+// add start now 1 end
+
 <h1>
 Cloud Button Phone Video Converter
 </h1>
@@ -161,6 +184,88 @@ const convertButton =
 const statusBox =
   document.getElementById("status");
 
+// add start now 2
+// --------------------------------------------------
+// Start Now test
+// --------------------------------------------------
+
+const startTestButton =
+  document.getElementById(
+    "startTestButton"
+  );
+
+const startTestStatus =
+  document.getElementById(
+    "startTestStatus"
+  );
+
+
+startTestButton.addEventListener(
+  "click",
+  async function () {
+
+    startTestButton.disabled = true;
+
+    startTestStatus.textContent =
+      "Start Now test running...\n\n" +
+      "Checking server...";
+
+    try {
+
+      const response =
+        await fetch(
+          "/health?starttest=" +
+          Date.now(),
+          {
+            method: "GET",
+            cache: "no-store"
+          }
+        );
+
+      if (!response.ok) {
+
+        throw new Error(
+          "Server returned HTTP " +
+          response.status
+        );
+
+      }
+
+      const result =
+        await response.json();
+
+      startTestStatus.textContent =
+        "START NOW TEST PASSED\n\n" +
+        "Server check successful.\n\n" +
+        "Health response:\n" +
+        JSON.stringify(
+          result,
+          null,
+          2
+        );
+
+      startTestButton.disabled = false;
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "Start Now test failed:",
+        error
+      );
+
+      startTestStatus.textContent =
+        "START NOW TEST FAILED\n\n" +
+        error.message;
+
+      startTestButton.disabled = false;
+
+    }
+
+  }
+);
+// add start now 2 end
 
 // --------------------------------------------------
 // Version check
