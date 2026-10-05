@@ -9,9 +9,9 @@ const app = express();
 
 const PORT = process.env.PORT || 10000;
 
-/* =========================
-   Google OAuth configuration
-   ========================= */
+/* =========================================================
+   Google OAuth - SERVER SIDE
+   ========================================================= */
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -19,16 +19,15 @@ const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_REDIRECT_URI
 );
 
-/* =========================
-   Google Drive Picker
-   ========================= */
+/* =========================================================
+   Google Cloud Project Number
+   ========================================================= */
 
-// Google Cloud Project Number
 const GOOGLE_APP_ID = "54132452919";
 
-/* =========================
+/* =========================================================
    Temporary directories
-   ========================= */
+   ========================================================= */
 
 const UPLOAD_DIR = "/tmp/uploads";
 const OUTPUT_DIR = "/tmp/outputs";
@@ -36,45 +35,60 @@ const OUTPUT_DIR = "/tmp/outputs";
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-/* =========================
-   Google OAuth
-   ========================= */
-
-app.get("/auth/google", (req, res) => {
-
-  const authUrl = oauth2Client.generateAuthUrl({
-
-    access_type: "offline",
-
-    prompt: "consent",
-
-    scope: [
-      "https://www.googleapis.com/auth/drive.file"
-    ]
-
-  });
-
-  res.redirect(authUrl);
-
-});
-
-/* =========================
-   Multer upload
-   ========================= */
+/* =========================================================
+   Multer upload configuration
+   ========================================================= */
 
 const upload = multer({
-
   dest: UPLOAD_DIR,
 
   limits: {
     fileSize: 500 * 1024 * 1024
   }
+});
+
+/* =========================================================
+   Google OAuth test route
+   ========================================================= */
+
+app.get("/auth/google", (req, res) => {
+
+  try {
+
+    const authUrl = oauth2Client.generateAuthUrl({
+
+      access_type: "offline",
+
+      prompt: "consent",
+
+      scope: [
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+
+    });
+
+    res.redirect(authUrl);
+
+  } catch (error) {
+
+    console.error(
+      "Google OAuth start error:",
+      error
+    );
+
+    res
+      .status(500)
+      .send(
+        "Could not start Google authorization."
+      );
+
+  }
 
 });
 
-/* =========================
-   OAuth callback
-   ========================= */
+/* =========================================================
+   Google OAuth callback
+   ========================================================= */
 
 app.get("/oauth2callback", async (req, res) => {
 
@@ -86,7 +100,9 @@ app.get("/oauth2callback", async (req, res) => {
 
       return res
         .status(400)
-        .send("Authorization code missing.");
+        .send(
+          "Authorization code missing."
+        );
 
     }
 
@@ -95,29 +111,67 @@ app.get("/oauth2callback", async (req, res) => {
 
     oauth2Client.setCredentials(tokens);
 
+    console.log(
+      "Google OAuth authorization completed."
+    );
+
     res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Google Drive Connected</title>
-      </head>
-      <body style="
-        font-family:Arial,sans-serif;
-        background:#111;
-        color:#fff;
-        padding:30px;
-        text-align:center;
-      ">
 
-        <h2>Google Drive Connected Successfully</h2>
+<!DOCTYPE html>
 
-        <p>
-          You can close this page and return to the converter.
-        </p>
+<html>
 
-      </body>
-      </html>
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+
+<title>Google Drive Connected</title>
+
+<style>
+
+body{
+  font-family:Arial,sans-serif;
+  background:#111;
+  color:#fff;
+  text-align:center;
+  padding:40px 20px;
+}
+
+.box{
+  max-width:500px;
+  margin:auto;
+  background:#222;
+  padding:30px;
+  border-radius:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>
+Google Drive Connected Successfully
+</h2>
+
+<p>
+You can close this page and return to the converter.
+</p>
+
+</div>
+
+</body>
+
+</html>
+
     `);
 
   } catch (error) {
@@ -129,15 +183,17 @@ app.get("/oauth2callback", async (req, res) => {
 
     res
       .status(500)
-      .send("Google authorization failed.");
+      .send(
+        "Google authorization failed."
+      );
 
   }
 
 });
 
-/* =========================
+/* =========================================================
    Homepage
-   ========================= */
+   ========================================================= */
 
 app.get("/", (req, res) => {
 
@@ -162,13 +218,17 @@ Cloud Button Phone Video Converter
 
 <style>
 
+*{
+  box-sizing:border-box;
+}
+
 body{
 
   font-family:Arial,sans-serif;
 
   max-width:600px;
 
-  margin:40px auto;
+  margin:0 auto;
 
   padding:20px;
 
@@ -179,7 +239,11 @@ body{
 }
 
 h1{
+
   font-size:24px;
+
+  margin-top:0;
+
 }
 
 .box{
@@ -188,7 +252,15 @@ h1{
 
   padding:20px;
 
-  border-radius:12px;
+  border-radius:14px;
+
+}
+
+.description{
+
+  color:#bbb;
+
+  margin-bottom:20px;
 
 }
 
@@ -208,15 +280,33 @@ button{
 
   cursor:pointer;
 
+  background:#fff;
+
+  color:#111;
+
 }
 
-input{
+button:disabled{
+
+  opacity:0.5;
+
+  cursor:not-allowed;
+
+}
+
+input[type="file"]{
 
   width:100%;
 
   margin-top:15px;
 
-  box-sizing:border-box;
+  padding:10px;
+
+  background:#333;
+
+  color:#fff;
+
+  border-radius:8px;
 
 }
 
@@ -224,7 +314,47 @@ input{
 
   margin-top:20px;
 
+  padding:15px;
+
+  background:#181818;
+
+  border-radius:8px;
+
   white-space:pre-wrap;
+
+  word-break:break-word;
+
+  line-height:1.5;
+
+}
+
+.success{
+
+  color:#4ade80;
+
+}
+
+.error{
+
+  color:#f87171;
+
+}
+
+.info{
+
+  color:#60a5fa;
+
+}
+
+a.download-link{
+
+  display:block;
+
+  margin-top:15px;
+
+  color:#4ade80;
+
+  font-size:18px;
 
 }
 
@@ -240,12 +370,15 @@ input{
 Cloud Button Phone Video Converter
 </h1>
 
-<p>
+<p class="description">
 Server-side FFmpeg test
 </p>
 
-<button onclick="testGoogleDriveButton()">
-  Import Video from Google Drive
+<button
+  id="driveButton"
+  type="button"
+>
+Import Video from Google Drive
 </button>
 
 <input
@@ -254,138 +387,368 @@ Server-side FFmpeg test
   accept="video/*"
 >
 
-<button onclick="convertVideo()">
+<button
+  id="convertButton"
+  type="button"
+>
 Convert to 144p MPEG-4
 </button>
 
-<div id="status"></div>
+<div
+  id="status"
+  class="info"
+>
+Starting JavaScript...
+</div>
 
 </div>
 
 
-<!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client"></script>
-
-<!-- Google API Client -->
-<script src="https://apis.google.com/js/api.js"></script>
-
-
 <script>
 
-/* =========================
-   Google configuration
-   ========================= */
+/* =========================================================
+   Browser configuration
+   ========================================================= */
 
-// OAuth Web Client ID
+/*
+  IMPORTANT:
+
+  Client ID is public and is intended for browser use.
+
+  API key is also used in the browser, but it must remain
+  restricted in Google Cloud Console.
+*/
+
 const GOOGLE_CLIENT_ID =
   "54132452919-5s9v4pkqj9bidkvkbr0ot2rbjvkm82oo.apps.googleusercontent.com";
 
-// Google API Key
 const GOOGLE_API_KEY =
   "AIzaSyBdPEvU-VFi758txglD485239hoA6Lwgsc";
 
-// Google Cloud Project Number
 const GOOGLE_APP_ID =
   "54132452919";
 
 
-/* =========================
-   Picker variables
-   ========================= */
+/* =========================================================
+   Global Google Picker variables
+   ========================================================= */
 
 let pickerTokenClient = null;
 
 let pickerAccessToken = null;
 
+let googleIdentityLoaded = false;
 
-/* =========================
-   Open Google Drive Picker
-   ========================= */
-   
-function testGoogleDriveButton() {
-  document.getElementById("status").textContent =
-    "BUTTON CLICK WORKS";
-}
+let googleApiLoaded = false;
 
-function openGoogleDrivePicker() {
+let googlePickerLoaded = false;
+
+
+/* =========================================================
+   Status helper
+   ========================================================= */
+
+function setStatus(message, type = "info") {
 
   const status =
     document.getElementById("status");
 
-  status.textContent =
-    "Opening Google Drive...";
+  if (!status) {
+    return;
+  }
+
+  status.className = type;
+
+  status.textContent = message;
+
+}
 
 
-  try {
+/* =========================================================
+   Dynamic script loader
+   ========================================================= */
 
-    if (
-      typeof google === "undefined" ||
-      !google.accounts ||
-      !google.accounts.oauth2
-    ) {
+function loadExternalScript(src) {
 
-      throw new Error(
-        "Google Identity Services did not load."
+  return new Promise((resolve, reject) => {
+
+    const existing =
+      document.querySelector(
+        'script[src="' + src + '"]'
       );
+
+    if (existing) {
+
+      resolve();
+
+      return;
 
     }
 
+    const script =
+      document.createElement("script");
 
-    pickerTokenClient =
-      google.accounts.oauth2.initTokenClient({
+    script.src = src;
 
-        client_id:
-          GOOGLE_CLIENT_ID,
+    script.async = true;
 
-        scope:
-          "https://www.googleapis.com/auth/drive.file",
+    script.onload = () => {
 
-        callback:
-          function(response) {
+      resolve();
 
-            if (
-              response.error
-            ) {
+    };
 
-              console.error(
-                "Google OAuth error:",
-                response
-              );
+    script.onerror = () => {
 
-              status.textContent =
-                "Google authorization failed:\n" +
-                (
-                  response.error_description ||
-                  response.error
-                );
+      reject(
+        new Error(
+          "Could not load:\n" + src
+        )
+      );
 
-              return;
+    };
 
-            }
+    document.head.appendChild(script);
+
+  });
+
+}
 
 
-            if (
-              !response.access_token
-            ) {
+/* =========================================================
+   Load Google Identity Services
+   ========================================================= */
 
-              status.textContent =
-                "Google did not return an access token.";
+async function loadGoogleIdentityServices() {
 
-              return;
+  if (
+    googleIdentityLoaded &&
+    window.google &&
+    window.google.accounts &&
+    window.google.accounts.oauth2
+  ) {
 
-            }
+    return;
+
+  }
+
+  setStatus(
+    "Loading Google authentication...",
+    "info"
+  );
+
+  await loadExternalScript(
+    "https://accounts.google.com/gsi/client"
+  );
+
+  if (
+    !window.google ||
+    !window.google.accounts ||
+    !window.google.accounts.oauth2
+  ) {
+
+    throw new Error(
+      "Google Identity Services did not load correctly."
+    );
+
+  }
+
+  googleIdentityLoaded = true;
+
+}
 
 
-            pickerAccessToken =
-              response.access_token;
+/* =========================================================
+   Load Google API client
+   ========================================================= */
 
+async function loadGoogleApiClient() {
 
-            loadGooglePicker();
+  if (
+    googleApiLoaded &&
+    window.gapi
+  ) {
+
+    return;
+
+  }
+
+  setStatus(
+    "Loading Google Picker library...",
+    "info"
+  );
+
+  await loadExternalScript(
+    "https://apis.google.com/js/api.js"
+  );
+
+  if (!window.gapi) {
+
+    throw new Error(
+      "Google API client did not load."
+    );
+
+  }
+
+  await new Promise((resolve, reject) => {
+
+    try {
+
+      window.gapi.load(
+        "picker",
+        {
+
+          callback: function() {
+
+            googlePickerLoaded = true;
+
+            resolve();
+
+          },
+
+          onerror: function() {
+
+            reject(
+              new Error(
+                "Google Picker API could not be loaded."
+              )
+            );
 
           }
 
-      });
+        }
+      );
 
+    } catch (error) {
+
+      reject(error);
+
+    }
+
+  });
+
+  googleApiLoaded = true;
+
+}
+
+
+/* =========================================================
+   Initialize Google OAuth token client
+   ========================================================= */
+
+function initializePickerTokenClient() {
+
+  if (
+    !window.google ||
+    !window.google.accounts ||
+    !window.google.accounts.oauth2
+  ) {
+
+    throw new Error(
+      "Google Identity Services is not available."
+    );
+
+  }
+
+  pickerTokenClient =
+    window.google.accounts.oauth2.initTokenClient({
+
+      client_id:
+        GOOGLE_CLIENT_ID,
+
+      scope:
+        "https://www.googleapis.com/auth/drive.file",
+
+      callback:
+        function(response) {
+
+          if (!response) {
+
+            setStatus(
+              "Google returned an empty response.",
+              "error"
+            );
+
+            return;
+
+          }
+
+          if (response.error) {
+
+            console.error(
+              "Google OAuth token error:",
+              response
+            );
+
+            setStatus(
+              "Google authorization failed.\\n\\n" +
+              (
+                response.error_description ||
+                response.error
+              ),
+              "error"
+            );
+
+            return;
+
+          }
+
+          if (!response.access_token) {
+
+            setStatus(
+              "Google did not return an access token.",
+              "error"
+            );
+
+            return;
+
+          }
+
+          pickerAccessToken =
+            response.access_token;
+
+          setStatus(
+            "Google account authorized.\\n" +
+            "Opening Google Drive Picker...",
+            "info"
+          );
+
+          createGooglePicker();
+
+        }
+
+    });
+
+}
+
+
+/* =========================================================
+   Open Google Drive Picker
+   ========================================================= */
+
+async function openGoogleDrivePicker() {
+
+  try {
+
+    setStatus(
+      "Starting Google Drive...",
+      "info"
+    );
+
+    await loadGoogleIdentityServices();
+
+    await loadGoogleApiClient();
+
+    if (!pickerTokenClient) {
+
+      initializePickerTokenClient();
+
+    }
+
+    setStatus(
+      "Please choose your Google account...",
+      "info"
+    );
 
     pickerTokenClient.requestAccessToken({
 
@@ -393,116 +756,121 @@ function openGoogleDrivePicker() {
 
     });
 
-
   } catch (error) {
 
     console.error(
-      "Google Picker start error:",
+      "Google Drive Picker error:",
       error
     );
 
-    status.textContent =
-      "Google Drive Picker error:\n" +
-      error.message;
+    setStatus(
+      "Google Drive Picker error:\\n\\n" +
+      error.message,
+      "error"
+    );
 
   }
 
 }
 
 
-/* =========================
-   Load Google Picker
-   ========================= */
-
-function loadGooglePicker() {
-
-  const status =
-    document.getElementById("status");
-
-
-  if (
-    typeof gapi === "undefined"
-  ) {
-
-    status.textContent =
-      "Google API library did not load.";
-
-    return;
-
-  }
-
-
-  gapi.load(
-    "picker",
-    function() {
-
-      createGooglePicker();
-
-    }
-  );
-
-}
-
-
-/* =========================
+/* =========================================================
    Create Google Picker
-   ========================= */
+   ========================================================= */
 
 function createGooglePicker() {
-
-  const status =
-    document.getElementById("status");
-
 
   try {
 
     if (
-      !google.picker
+      !window.google ||
+      !window.google.picker
     ) {
 
       throw new Error(
-        "Google Picker API did not load."
+        "Google Picker API is not available."
+      );
+
+    }
+
+    if (!pickerAccessToken) {
+
+      throw new Error(
+        "Google access token is missing."
       );
 
     }
 
 
-    const picker =
-      new google.picker.PickerBuilder()
+    /*
+      DocsView is used instead of the older
+      DOCS_VIDEOS style.
 
-        // Google API Key
+      This allows us to explicitly filter
+      the displayed files by MIME type.
+    */
+
+    const videoView =
+      new window.google.picker.DocsView(
+        window.google.picker.ViewId.DOCS
+      )
+
+        .setIncludeFolders(false)
+
+        .setSelectFolderEnabled(false)
+
+        .setMimeTypes(
+          "video/mp4," +
+          "video/quicktime," +
+          "video/webm," +
+          "video/x-msvideo," +
+          "video/x-matroska"
+        );
+
+
+    const builder =
+      new window.google.picker.PickerBuilder()
+
         .setDeveloperKey(
           GOOGLE_API_KEY
         )
 
-        // OAuth access token
-        .setOAuthToken(
-          pickerAccessToken
-        )
-
-        // Google Cloud Project Number
         .setAppId(
           GOOGLE_APP_ID
         )
 
-        // Show only Google Drive videos
-        .addView(
-          google.picker.ViewId.DOCS_VIDEOS
+        .setOAuthToken(
+          pickerAccessToken
         )
 
-        // Picker callback
+        .addView(
+          videoView
+        )
+
+        .setMaxItems(1)
+
         .setCallback(
           pickerCallback
         )
 
-        .build();
+        .setOrigin(
+          window.location.protocol +
+          "//" +
+          window.location.host
+        );
+
+
+    const picker =
+      builder.build();
 
 
     picker.setVisible(true);
 
 
-    status.textContent =
-      "Google Drive Picker opened.";
+    setStatus(
+      "Google Drive Picker opened.",
+      "info"
+    );
 
   } catch (error) {
 
@@ -511,104 +879,179 @@ function createGooglePicker() {
       error
     );
 
-    status.textContent =
-      "Google Picker could not open:\n" +
-      error.message;
+    setStatus(
+      "Google Picker could not open:\\n\\n" +
+      error.message,
+      "error"
+    );
 
   }
 
 }
 
 
-/* =========================
-   Picker callback
-   ========================= */
+/* =========================================================
+   Google Picker callback
+   ========================================================= */
 
 function pickerCallback(data) {
 
-  const status =
-    document.getElementById("status");
+  try {
+
+    if (!data) {
+
+      setStatus(
+        "Google Picker returned no data.",
+        "error"
+      );
+
+      return;
+
+    }
 
 
-  if (
-    data.action ===
-    google.picker.Action.PICKED
-  ) {
+    if (
+      data.action ===
+      window.google.picker.Action.PICKED
+    ) {
 
-    const file =
-      data.docs[0];
+      if (
+        !data.docs ||
+        !data.docs.length
+      ) {
 
+        setStatus(
+          "No file information was returned.",
+          "error"
+        );
 
-    const fileId =
-      file.id;
+        return;
 
-
-    const fileName =
-      file.name;
-
-
-    status.textContent =
-      "Selected from Google Drive:\n" +
-      fileName +
-      "\n\nFile ID:\n" +
-      fileId;
+      }
 
 
-    console.log(
-      "Selected Drive file:",
-      file
+      const file =
+        data.docs[0];
+
+
+      const fileId =
+        file.id || "Unknown";
+
+
+      const fileName =
+        file.name || "Unknown";
+
+
+      setStatus(
+
+        "Google Drive video selected successfully.\\n\\n" +
+
+        "File name:\\n" +
+        fileName +
+        "\\n\\n" +
+
+        "File ID:\\n" +
+        fileId +
+        "\\n\\n" +
+
+        "Picker test completed successfully.\\n" +
+        "The next stage will send this file to the server.",
+
+        "success"
+
+      );
+
+
+      console.log(
+        "Selected Google Drive file:",
+        file
+      );
+
+
+      /*
+        IMPORTANT:
+
+        This testing version does NOT download
+        the selected Drive file yet.
+
+        That will be implemented after the
+        Picker test is confirmed working.
+      */
+
+      return;
+
+    }
+
+
+    if (
+      data.action ===
+      window.google.picker.Action.CANCEL
+    ) {
+
+      setStatus(
+        "Google Drive selection cancelled.",
+        "info"
+      );
+
+      return;
+
+    }
+
+
+    setStatus(
+      "Google Picker returned an unknown action.",
+      "error"
     );
 
+  } catch (error) {
 
-    /*
-      The selected Drive file is currently
-      only being identified.
+    console.error(
+      "Picker callback error:",
+      error
+    );
 
-      The next stage will send this file ID
-      and the authorized access token to the
-      server so the server can download the
-      Drive video temporarily and convert it.
-    */
-
-  }
-
-
-  else if (
-    data.action ===
-    google.picker.Action.CANCEL
-  ) {
-
-    status.textContent =
-      "Google Drive selection cancelled.";
+    setStatus(
+      "Picker callback error:\\n\\n" +
+      error.message,
+      "error"
+    );
 
   }
 
 }
 
 
-/* =========================
-   Local video conversion
-   ========================= */
+/* =========================================================
+   Local device video conversion
+   ========================================================= */
 
-async function convertVideo(){
+async function convertVideo() {
 
   const input =
     document.getElementById("video");
 
-  const status =
-    document.getElementById("status");
+  const convertButton =
+    document.getElementById("convertButton");
 
 
-  if(
+  if (
+    !input ||
+    !input.files ||
     !input.files.length
-  ){
+  ) {
 
-    status.textContent =
-      "Please select a video first.";
+    setStatus(
+      "Please select a video from your device first.",
+      "error"
+    );
 
     return;
 
   }
+
+
+  const selectedFile =
+    input.files[0];
 
 
   const formData =
@@ -617,35 +1060,50 @@ async function convertVideo(){
 
   formData.append(
     "video",
-    input.files[0]
+    selectedFile
   );
 
 
-  status.textContent =
-    "Uploading video to server...\n" +
-    "Please wait.";
+  convertButton.disabled = true;
 
 
-  try{
+  setStatus(
+    "Uploading video to server...\\n\\n" +
+    "File: " +
+    selectedFile.name +
+    "\\n" +
+    "Size: " +
+    formatFileSize(selectedFile.size) +
+    "\\n\\n" +
+    "Please wait.",
+    "info"
+  );
+
+
+  try {
 
     const response =
       await fetch(
         "/convert",
         {
-          method:"POST",
-          body:formData
+
+          method: "POST",
+
+          body: formData
+
         }
       );
 
 
-    if(
-      !response.ok
-    ){
+    if (!response.ok) {
 
-      const text =
+      const errorText =
         await response.text();
 
-      throw new Error(text);
+      throw new Error(
+        errorText ||
+        "Server returned an error."
+      );
 
     }
 
@@ -654,37 +1112,201 @@ async function convertVideo(){
       await response.json();
 
 
-    status.innerHTML =
-      "Conversion completed successfully.\\n\\n" +
+    if (
+      !data ||
+      !data.download
+    ) {
 
-      '<a href="' +
-      data.download +
-      '" ' +
+      throw new Error(
+        "Server completed the conversion but did not return a download link."
+      );
 
-      'style="' +
-      'color:#4ade80;' +
-      'font-size:18px;' +
-      '">' +
-
-      "Download Converted Video" +
-
-      "</a>";
+    }
 
 
-  }catch(error){
+    setStatus(
+      "Conversion completed successfully.",
+      "success"
+    );
 
-    status.textContent =
-      "Conversion failed:\\n" +
-      error.message;
+
+    const status =
+      document.getElementById("status");
+
+
+    const link =
+      document.createElement("a");
+
+
+    link.href =
+      data.download;
+
+
+    link.className =
+      "download-link";
+
+
+    link.textContent =
+      "Download Converted Video";
+
+
+    link.target =
+      "_blank";
+
+
+    status.appendChild(
+      link
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Conversion error:",
+      error
+    );
+
+    setStatus(
+      "Conversion failed:\\n\\n" +
+      error.message,
+      "error"
+    );
+
+  } finally {
+
+    convertButton.disabled = false;
 
   }
 
 }
 
 
-/* =========================
-   End JavaScript
-   ========================= */
+/* =========================================================
+   File size helper
+   ========================================================= */
+
+function formatFileSize(bytes) {
+
+  if (!bytes) {
+
+    return "0 B";
+
+  }
+
+
+  const units = [
+    "B",
+    "KB",
+    "MB",
+    "GB"
+  ];
+
+
+  const index =
+    Math.floor(
+      Math.log(bytes) /
+      Math.log(1024)
+    );
+
+
+  const safeIndex =
+    Math.min(
+      index,
+      units.length - 1
+    );
+
+
+  return (
+    bytes /
+    Math.pow(1024, safeIndex)
+  ).toFixed(2) +
+  " " +
+  units[safeIndex];
+
+}
+
+
+/* =========================================================
+   Page initialization
+   ========================================================= */
+
+function initializePage() {
+
+  const driveButton =
+    document.getElementById("driveButton");
+
+  const convertButton =
+    document.getElementById("convertButton");
+
+
+  if (!driveButton) {
+
+    setStatus(
+      "ERROR: Google Drive button was not found.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  if (!convertButton) {
+
+    setStatus(
+      "ERROR: Convert button was not found.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  driveButton.addEventListener(
+    "click",
+    openGoogleDrivePicker
+  );
+
+
+  convertButton.addEventListener(
+    "click",
+    convertVideo
+  );
+
+
+  setStatus(
+    "JavaScript loaded successfully.\\n\\n" +
+    "Ready for testing.",
+    "success"
+  );
+
+
+  console.log(
+    "Converter page JavaScript initialized successfully."
+  );
+
+}
+
+
+/* =========================================================
+   Start browser application
+   ========================================================= */
+
+if (
+  document.readyState === "loading"
+) {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    initializePage
+  );
+
+} else {
+
+  initializePage();
+
+}
 
 </script>
 
@@ -697,9 +1319,9 @@ async function convertVideo(){
 });
 
 
-/* =========================
-   Video conversion
-   ========================= */
+/* =========================================================
+   Video conversion endpoint
+   ========================================================= */
 
 app.post(
   "/convert",
@@ -710,7 +1332,9 @@ app.post(
 
       return res
         .status(400)
-        .send("No video uploaded.");
+        .send(
+          "No video uploaded."
+        );
 
     }
 
@@ -785,12 +1409,25 @@ app.post(
 
 
     console.log(
-      "Starting FFmpeg conversion..."
+      "========================================"
+    );
+
+    console.log(
+      "Starting FFmpeg conversion"
     );
 
     console.log(
       "Input:",
       req.file.originalname
+    );
+
+    console.log(
+      "Output:",
+      outputName
+    );
+
+    console.log(
+      "========================================"
     );
 
 
@@ -808,6 +1445,10 @@ app.post(
       (error, stdout, stderr) => {
 
 
+        /*
+          Delete uploaded temporary input.
+        */
+
         try {
 
           fs.unlinkSync(
@@ -820,6 +1461,10 @@ app.post(
         if (error) {
 
           console.error(
+            "FFmpeg conversion failed:"
+          );
+
+          console.error(
             stderr
           );
 
@@ -827,7 +1472,7 @@ app.post(
           return res
             .status(500)
             .send(
-              "FFmpeg conversion failed.\n\n" +
+              "FFmpeg conversion failed.\\n\\n" +
               stderr.slice(-3000)
             );
 
@@ -850,18 +1495,13 @@ app.post(
 
 
         console.log(
-          "Conversion completed."
-        );
-
-        console.log(
-          "Output:",
-          outputFile
+          "FFmpeg conversion completed successfully."
         );
 
 
         res.json({
 
-          success:true,
+          success: true,
 
           filename:
             outputName,
@@ -874,7 +1514,6 @@ app.post(
 
         });
 
-
       }
 
     );
@@ -883,57 +1522,112 @@ app.post(
 );
 
 
-/* =========================
-   Download converted file
-   ========================= */
+/* =========================================================
+   Download converted video
+   ========================================================= */
 
 app.get(
   "/download/:filename",
   (req, res) => {
 
+    try {
 
-    const filename =
-      path.basename(
-        decodeURIComponent(
-          req.params.filename
+      const filename =
+        path.basename(
+          decodeURIComponent(
+            req.params.filename
+          )
+        );
+
+
+      const filePath =
+        path.join(
+          OUTPUT_DIR,
+          filename
+        );
+
+
+      if (
+        !fs.existsSync(
+          filePath
         )
+      ) {
+
+        return res
+          .status(404)
+          .send(
+            "File not found."
+          );
+
+      }
+
+
+      res.download(
+        filePath,
+        filename,
+        (error) => {
+
+          if (error) {
+
+            console.error(
+              "Download error:",
+              error
+            );
+
+          }
+
+        }
       );
 
+    } catch (error) {
 
-    const filePath =
-      path.join(
-        OUTPUT_DIR,
-        filename
+      console.error(
+        "Download route error:",
+        error
       );
 
-
-    if (
-      !fs.existsSync(
-        filePath
-      )
-    ) {
-
-      return res
-        .status(404)
+      res
+        .status(500)
         .send(
-          "File not found."
+          "Could not download the file."
         );
 
     }
-
-
-    res.download(
-      filePath,
-      filename
-    );
 
   }
 );
 
 
-/* =========================
+/* =========================================================
+   Health check
+   ========================================================= */
+
+app.get(
+  "/health",
+  (req, res) => {
+
+    res.json({
+
+      status: "ok",
+
+      service:
+        "cloud-button-phone-converter",
+
+      ffmpeg:
+        "server-side",
+
+      time:
+        new Date().toISOString()
+
+    });
+
+  }
+);
+
+
+/* =========================================================
    Start server
-   ========================= */
+   ========================================================= */
 
 app.listen(
   PORT,
@@ -941,8 +1635,20 @@ app.listen(
   () => {
 
     console.log(
-      "Cloud Button Phone Video Converter running on port " +
+      "========================================"
+    );
+
+    console.log(
+      "Cloud Button Phone Video Converter"
+    );
+
+    console.log(
+      "Server running on port:",
       PORT
+    );
+
+    console.log(
+      "========================================"
     );
 
   }
