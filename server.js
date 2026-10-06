@@ -981,36 +981,36 @@ app.post(
               stderr
             ) => {
 
-              if (error) {
+             if (error) {
 
-                console.error(
-                  "FFmpeg error:"
-                );
+  console.error(
+    "FFmpeg error:"
+  );
 
-                console.error(
-                  stderr
-                );
+  console.error(
+    stderr
+  );
 
-                updateLiveStatus(
-                  "ffmpeg",
-                  "Failed"
-                );
+  updateLiveStatus(
+    "ffmpeg",
+    "FAILED"
+  );
 
-                updateLiveStatus(
-                  "result",
-                  "Conversion failed"
-                );
+  updateLiveStatus(
+    "result",
+    "FFmpeg conversion failed"
+  );
 
-                reject(
-                  new Error(
-                    "FFmpeg conversion failed.\n\n" +
-                    stderr.slice(-3000)
-                  )
-                );
+  reject(
+    new Error(
+      "FFmpeg conversion failed.\n\n" +
+      stderr.slice(-3000)
+    )
+  );
 
-                return;
+  return;
 
-              }
+}
 
               updateLiveStatus(
                 "ffmpeg",
