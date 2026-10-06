@@ -44,10 +44,22 @@ app.get("/startup-test", (req, res) => {
     "lavfi",
 
     "-i",
-    "color=c=black:s=256x144:r=15",
+    "testsrc=size=256x144:rate=15",
+
+    "-f",
+    "lavfi",
+
+    "-i",
+    "anullsrc=channel_layout=mono:sample_rate=44100",
 
     "-t",
-    "1",
+    "2",
+
+    "-vf",
+    "scale=256:144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2",
+
+    "-r",
+    "15",
 
     "-c:v",
     "mpeg4",
@@ -55,7 +67,20 @@ app.get("/startup-test", (req, res) => {
     "-b:v",
     "180k",
 
-    "-an",
+    "-c:a",
+    "aac",
+
+    "-ac",
+    "1",
+
+    "-b:a",
+    "32k",
+
+    "-ar",
+    "44100",
+
+    "-movflags",
+    "+faststart",
 
     testOutput
 
