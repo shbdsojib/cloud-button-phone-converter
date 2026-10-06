@@ -184,7 +184,17 @@ const convertButton =
 const statusBox =
   document.getElementById("status");
 
-// add start now 2
+const startTestButton =
+  document.getElementById("startTestButton");
+
+const startTestStatus =
+  document.getElementById("startTestStatus");
+
+
+// --------------------------------------------------
+// Start Now test
+// --------------------------------------------------
+
 startTestButton.addEventListener(
   "click",
   function () {
@@ -196,25 +206,13 @@ startTestButton.addEventListener(
       .then(
         function (response) {
 
-          if (response.ok) {
+          startTestStatus.textContent =
+            "FETCH REQUEST WORKING";
 
-  startTestStatus.textContent =
-    "SERVER CHECK PASSED";
-
-}
-else {
-
-  startTestStatus.textContent =
-    "SERVER CHECK FAILED\n\n" +
-    "HTTP Status: " +
-    response.status;
-
-}
-
-console.log(
-  "Health response status:",
-  response.status
-);
+          console.log(
+            "Health response status:",
+            response.status
+          );
 
         }
       )
@@ -234,7 +232,7 @@ console.log(
 
   }
 );
-// add start now 2 end
+
 
 // --------------------------------------------------
 // Version check
