@@ -693,7 +693,102 @@ convertButton.addEventListener(
   }
 );
 
+// --------------------------------------------------
+// Live server status
+// --------------------------------------------------
+
+async function updateLiveStatus() {
+
+  try {
+
+    const response =
+      await fetch(
+        "/live-status?time=" +
+        Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    document.getElementById(
+      "liveDebugBox"
+    ).textContent =
+
+      "LIVE SERVER STATUS\n\n" +
+
+      "Server: " +
+      data.server +
+
+      "\n" +
+
+      "Convert Request: " +
+      data.convertRequest +
+
+      "\n" +
+
+      "File Upload: " +
+      data.fileUpload +
+
+      "\n" +
+
+      "FFmpeg: " +
+      data.ffmpeg +
+
+      "\n" +
+
+      "Result: " +
+      data.result +
+
+      "\n\n" +
+
+      "Updated: " +
+      data.updatedAt;
+
+  }
+
+  catch (error) {
+
+    document.getElementById(
+      "liveDebugBox"
+    ).textContent =
+
+      "LIVE SERVER STATUS\n\n" +
+
+      "Status request failed.";
+
+  }
+
+}
+
+
+setInterval(
+  updateLiveStatus,
+  1000
+);
+
+updateLiveStatus();
+
 </script>
+
+<div
+  id="liveDebugBox"
+  style="
+    margin-top:15px;
+    padding:12px;
+    background:#1f1f1f;
+    border:1px solid #444;
+    border-radius:8px;
+    white-space:pre-wrap;
+    font-family:monospace;
+    font-size:13px;
+  "
+>
+LIVE SERVER STATUS
+Loading...
+</div>
 
 </body>
 
