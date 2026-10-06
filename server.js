@@ -875,6 +875,11 @@ app.post(
 
     updateLiveStatus(
       "result",
+      "Conversion request received"
+    );
+
+    updateLiveStatus(
+      "result",
       "Waiting"
     );
 
