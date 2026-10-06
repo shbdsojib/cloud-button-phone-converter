@@ -761,16 +761,17 @@ convertButton.addEventListener(
         "The page will reload automatically in 2 seconds.";
 
 
-      await delay(2000);
+      /*await delay(2000);*/
 
 
       // --------------------------------------------
       // Reload as Version 2
       // --------------------------------------------
 
-      window.location.href =
-        "/?version=2";
+      /*window.location.href =
+        "/?version=2";*/
 
+        return;
     }
 
   }
