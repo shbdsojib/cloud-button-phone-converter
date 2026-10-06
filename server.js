@@ -712,6 +712,67 @@ LIVE SERVER STATUS
 Loading...
 </div>
 
+<script>
+(function () {
+
+  function updateLiveStatusBox() {
+
+    fetch("/live-status?time=" + Date.now())
+      .then(function (response) {
+        return response.text();
+      })
+      .then(function (text) {
+
+        var data;
+
+        try {
+          data = JSON.parse(text);
+        } catch (error) {
+          return;
+        }
+
+        var box =
+          document.getElementById("liveDebugBox");
+
+        if (!box) {
+          return;
+        }
+
+        box.textContent =
+          "LIVE SERVER STATUS\n\n" +
+          "Server: " +
+          data.server +
+          "\n" +
+          "Convert Request: " +
+          data.convertRequest +
+          "\n" +
+          "File Upload: " +
+          data.fileUpload +
+          "\n" +
+          "FFmpeg: " +
+          data.ffmpeg +
+          "\n" +
+          "Result: " +
+          data.result +
+          "\n\n" +
+          "Updated: " +
+          data.updatedAt;
+
+      })
+      .catch(function () {});
+
+  }
+
+  updateLiveStatusBox();
+
+  setInterval(
+    updateLiveStatusBox,
+    2000
+  );
+
+})();
+</script>
+
 </body>
 
 </html>
