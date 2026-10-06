@@ -96,6 +96,21 @@ app.get(
   "/live-status",
   (req, res) => {
 
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+
+    res.set(
+      "Pragma",
+      "no-cache"
+    );
+
+    res.set(
+      "Expires",
+      "0"
+    );
+
     res.send(`
 <!DOCTYPE html>
 <html>
