@@ -1,4 +1,3 @@
-// v2
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
@@ -22,12 +21,87 @@ const upload = multer({
   }
 });
 
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: "ready"
-  });
-});
+
+// --------------------------------------------------
+// Live debug status
+// --------------------------------------------------
+
+let liveStatus = {
+
+  server: "Ready",
+
+  convertRequest:
+    "Waiting",
+
+  fileUpload:
+    "Waiting",
+
+  ffmpeg:
+    "Waiting",
+
+  result:
+    "Waiting",
+
+  updatedAt:
+    new Date().toISOString()
+
+};
+
+
+function updateLiveStatus(
+  field,
+  value
+) {
+
+  liveStatus[field] =
+    value;
+
+  liveStatus.updatedAt =
+    new Date().toISOString();
+
+}
+
+
+// --------------------------------------------------
+// Health
+// --------------------------------------------------
+
+app.get(
+  "/health",
+  (req, res) => {
+
+    updateLiveStatus(
+      "server",
+      "Ready"
+    );
+
+    res.status(200).json({
+
+      success: true,
+
+      status:
+        "ready"
+
+    });
+
+  }
+);
+
+
+// --------------------------------------------------
+// Live status API
+// --------------------------------------------------
+
+app.get(
+  "/live-status",
+  (req, res) => {
+
+    res.status(200).json(
+      liveStatus
+    );
+
+  }
+);
 
 app.get("/startup-test", (req, res) => {
 
