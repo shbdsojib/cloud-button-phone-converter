@@ -21,104 +21,24 @@ const upload = multer({
   }
 });
 
+
+// --------------------------------------------------
+// Health check
+// --------------------------------------------------
+
 app.get("/health", (req, res) => {
+
   res.status(200).json({
     success: true,
     status: "ready"
   });
-});
-
-app.get("/startup-test", (req, res) => {
-
-  const testOutput =
-    path.join(
-      OUTPUT_DIR,
-      "startup-test.mp4"
-    );
-
-  const testArgs = [
-
-    "-y",
-
-    "-f",
-    "lavfi",
-
-    "-i",
-    "color=c=black:s=256x144:r=15",
-
-    "-t",
-    "1",
-
-    "-c:v",
-    "mpeg4",
-
-    "-b:v",
-    "180k",
-
-    "-an",
-
-    testOutput
-
-  ];
-
-  execFile(
-    "ffmpeg",
-    testArgs,
-    {
-      maxBuffer:
-        10 * 1024 * 1024
-    },
-
-    (error, stdout, stderr) => {
-
-      if (error) {
-
-        console.error(
-          "Startup test failed:",
-          stderr
-        );
-
-        return res
-          .status(500)
-          .send(
-            "Startup test failed."
-          );
-
-      }
-
-      if (
-        !fs.existsSync(
-          testOutput
-        )
-      ) {
-
-        return res
-          .status(500)
-          .send(
-            "Startup test output was not created."
-          );
-
-      }
-
-      try {
-
-        fs.unlinkSync(
-          testOutput
-        );
-
-      }
-
-      catch (_) {}
-
-      return res.json({
-        success: true,
-        status: "ready"
-      });
-
-    }
-  );
 
 });
+
+
+// --------------------------------------------------
+// Homepage
+// --------------------------------------------------
 
 app.get("/", (req, res) => {
 
@@ -208,29 +128,6 @@ a {
 
 <div class="box">
 
-// add start now 1
-<button
-  id="startTestButton"
-  type="button"
->
-  Start Now
-</button>
-
-<div
-  id="startTestStatus"
-  style="
-    margin-top:10px;
-    padding:10px;
-    background:#292929;
-    border-radius:8px;
-    white-space:pre-wrap;
-  "
->
-Ready for Start Now test.
-</div>
-
-// add start now 1 end
-
 <h1>
 Cloud Button Phone Video Converter
 </h1>
@@ -256,7 +153,7 @@ Convert Local Video
 </button>
 
 <div id="status">
-Ready For Convert V1
+Ready.
 
 Select a video to begin.
 </div>
@@ -264,6 +161,7 @@ Select a video to begin.
 </div>
 
 </div>
+
 
 <script>
 
@@ -275,93 +173,6 @@ const convertButton =
 
 const statusBox =
   document.getElementById("status");
-
-const startTestButton =
-  document.getElementById("startTestButton");
-
-const startTestStatus =
-  document.getElementById("startTestStatus");
-
-
-// --------------------------------------------------
-// Start Now test
-// --------------------------------------------------
-
-startTestButton.addEventListener(
-  "click",
-  function () {
-
-    startTestStatus.textContent =
-      "STARTUP TEST RUNNING";
-
-    startTestButton.disabled = true;
-
-    fetch(
-      "/startup-test?test=" +
-      Date.now()
-    )
-      .then(
-        function (response) {
-
-          if (
-            response.status === 200
-          ) {
-
-            startTestStatus.textContent =
-              "STARTUP TEST PASSED";
-
-          }
-          else {
-
-            startTestStatus.textContent =
-              "STARTUP TEST FAILED";
-
-          }
-
-          startTestButton.disabled =
-            false;
-
-        }
-      )
-      .catch(
-        function (error) {
-
-          startTestStatus.textContent =
-            "STARTUP TEST FAILED";
-
-          console.error(
-            "Startup test error:",
-            error
-          );
-
-          startTestButton.disabled =
-            false;
-
-        }
-      );
-
-  }
-);
-
-
-// --------------------------------------------------
-// Version check
-// --------------------------------------------------
-
-const urlParams =
-  new URLSearchParams(
-    window.location.search
-  );
-
-if (
-  urlParams.get("version") === "2"
-) {
-
-  statusBox.textContent =
-    "Ready For Convert V2\\n\\n" +
-    "Select a video to begin.";
-
-}
 
 
 // --------------------------------------------------
@@ -396,6 +207,10 @@ async function warmUpServer() {
   }
 
 }
+
+
+// Start background warm-up.
+// This does NOT block the page.
 
 warmUpServer();
 
@@ -527,16 +342,87 @@ convertButton.addEventListener(
 
     convertButton.disabled = true;
 
+    let result = null;
+
+    let lastError = null;
+
 
     try {
 
-      statusBox.textContent =
-        "Uploading and converting video...\\n\\n" +
-        "Please wait.";
+      // --------------------------------------------
+      // Automatic retry
+      // --------------------------------------------
+
+      for (
+        let attempt = 1;
+        attempt <= 3;
+        attempt++
+      ) {
+
+        try {
+
+          statusBox.textContent =
+            "Uploading and converting video...\\n\\n" +
+
+            "Attempt " +
+            attempt +
+            " of 3.\\n\\n" +
+
+            "Please wait.";
+
+          result =
+            await convertVideo(file);
+
+          break;
+
+        }
+
+        catch (error) {
+
+          lastError = error;
+
+          console.log(
+            "Conversion attempt " +
+            attempt +
+            " failed:",
+            error
+          );
 
 
-      const result =
-        await convertVideo(file);
+          if (
+            attempt < 3
+          ) {
+
+            statusBox.textContent =
+              "Server connection interrupted.\\n\\n" +
+
+              "Retrying automatically...\\n\\n" +
+
+              "Please wait.";
+
+            await delay(3000);
+
+          }
+
+        }
+
+      }
+
+
+      // --------------------------------------------
+      // Failed after all attempts
+      // --------------------------------------------
+
+      if (!result) {
+
+        throw (
+          lastError ||
+          new Error(
+            "Conversion failed."
+          )
+        );
+
+      }
 
 
       // --------------------------------------------
@@ -560,33 +446,16 @@ convertButton.addEventListener(
 
     catch (error) {
 
-      console.log(
-        "Conversion failed:",
-        error
-      );
-
-
-      // --------------------------------------------
-      // Automatic recovery
-      // --------------------------------------------
-
       statusBox.textContent =
-        "First conversion attempt failed.\\n\\n" +
+        "Conversion failed.\\n\\n" +
+        error.message;
 
-        "Reconnecting...\\n\\n" +
-
-        "The page will reload automatically in 2 seconds.";
-
-
-      await delay(2000);
+    }
 
 
-      // --------------------------------------------
-      // Reload as Version 2
-      // --------------------------------------------
+    finally {
 
-      window.location.href =
-        "/?version=2";
+      convertButton.disabled = false;
 
     }
 
@@ -604,7 +473,7 @@ convertButton.addEventListener(
 
 
 // --------------------------------------------------
-// Video conversion
+// Conversion endpoint
 // --------------------------------------------------
 
 app.post(
@@ -827,7 +696,7 @@ app.post(
 
 
 // --------------------------------------------------
-// Download converted video
+// Download
 // --------------------------------------------------
 
 app.get(
