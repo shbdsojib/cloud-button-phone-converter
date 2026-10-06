@@ -729,24 +729,27 @@ app.post(
   upload.single("video"),
   async (req, res) => {
 
-    console.log(
-      "========================================"
+    updateLiveStatus(
+      "convertRequest",
+      "Received"
     );
 
-    console.log(
-      "CONVERT REQUEST RECEIVED"
-    );
-
-    console.log(
-      "Request time:",
-      new Date().toISOString()
+    updateLiveStatus(
+      "result",
+      "Waiting"
     );
 
 
     if (!req.file) {
 
-      console.error(
-        "CONVERT ERROR: No video file received."
+      updateLiveStatus(
+        "fileUpload",
+        "Failed"
+      );
+
+      updateLiveStatus(
+        "result",
+        "Conversion failed"
       );
 
       return res
@@ -758,24 +761,9 @@ app.post(
     }
 
 
-    console.log(
-      "FILE RECEIVED"
-    );
-
-    console.log(
-      "Original filename:",
-      req.file.originalname
-    );
-
-    console.log(
-      "Uploaded file path:",
-      req.file.path
-    );
-
-    console.log(
-      "Uploaded file size:",
-      req.file.size,
-      "bytes"
+    updateLiveStatus(
+      "fileUpload",
+      "Received"
     );
 
 
@@ -806,12 +794,6 @@ app.post(
       );
 
 
-    console.log(
-      "Output file:",
-      outputFile
-    );
-
-
     const ffmpegArgs = [
 
       "-y",
@@ -820,7 +802,7 @@ app.post(
       inputFile,
 
       "-vf",
-      "scale=256:144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:ih",
+      "scale=256:144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2",
 
       "-r",
       "15",
@@ -851,17 +833,9 @@ app.post(
     ];
 
 
-    console.log(
-      "FFMPEG STARTING"
-    );
-
-    console.log(
-      "FFmpeg input exists:",
-      fs.existsSync(inputFile)
-    );
-
-    console.log(
-      "FFmpeg arguments prepared."
+    updateLiveStatus(
+      "ffmpeg",
+      "Running"
     );
 
 
@@ -884,33 +858,24 @@ app.post(
               stderr
             ) => {
 
-              console.log(
-                "FFMPEG PROCESS FINISHED"
-              );
-
-
               if (error) {
 
                 console.error(
-                  "FFMPEG FAILED"
-                );
-
-                console.error(
-                  "FFmpeg error code:",
-                  error.code
-                );
-
-                console.error(
-                  "FFmpeg error signal:",
-                  error.signal
-                );
-
-                console.error(
-                  "FFmpeg stderr:"
+                  "FFmpeg error:"
                 );
 
                 console.error(
                   stderr
+                );
+
+                updateLiveStatus(
+                  "ffmpeg",
+                  "Failed"
+                );
+
+                updateLiveStatus(
+                  "result",
+                  "Conversion failed"
                 );
 
                 reject(
@@ -924,9 +889,9 @@ app.post(
 
               }
 
-
-              console.log(
-                "FFMPEG PROCESS SUCCESS"
+              updateLiveStatus(
+                "ffmpeg",
+                "Completed"
               );
 
               resolve();
@@ -939,19 +904,15 @@ app.post(
       );
 
 
-      console.log(
-        "CHECKING OUTPUT FILE"
-      );
-
-
       if (
         !fs.existsSync(
           outputFile
         )
       ) {
 
-        console.error(
-          "OUTPUT FILE NOT FOUND"
+        updateLiveStatus(
+          "result",
+          "Output file missing"
         );
 
         throw new Error(
@@ -961,27 +922,9 @@ app.post(
       }
 
 
-      console.log(
-        "OUTPUT FILE EXISTS"
-      );
-
-
-      const outputStats =
-        fs.statSync(
-          outputFile
-        );
-
-
-      console.log(
-        "Output file size:",
-        outputStats.size,
-        "bytes"
-      );
-
-
-      console.log(
-        "CONVERSION COMPLETED:",
-        outputName
+      updateLiveStatus(
+        "result",
+        "Conversion successful"
       );
 
 
@@ -1006,11 +949,12 @@ app.post(
     catch (error) {
 
       console.error(
-        "CONVERSION CATCH ERROR"
+        error
       );
 
-      console.error(
-        error
+      updateLiveStatus(
+        "result",
+        "Conversion failed"
       );
 
       return res
@@ -1024,11 +968,6 @@ app.post(
 
     finally {
 
-      console.log(
-        "CLEANUP STARTING"
-      );
-
-
       try {
 
         if (
@@ -1041,31 +980,11 @@ app.post(
             inputFile
           );
 
-          console.log(
-            "Input file deleted."
-          );
-
         }
 
       }
 
-      catch (cleanupError) {
-
-        console.error(
-          "Cleanup error:",
-          cleanupError
-        );
-
-      }
-
-
-      console.log(
-        "CONVERT REQUEST FINISHED"
-      );
-
-      console.log(
-        "========================================"
-      );
+      catch (_) {}
 
     }
 
