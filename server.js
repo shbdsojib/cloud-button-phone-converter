@@ -160,11 +160,28 @@ app.get(
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="1">
+
+<meta
+  http-equiv="Cache-Control"
+  content="no-cache, no-store, must-revalidate"
+>
+
+<meta
+  http-equiv="Pragma"
+  content="no-cache"
+>
+
+<meta
+  http-equiv="Expires"
+  content="0"
+>
+
 <title>Live Server Status</title>
 
 <style>
+
 body {
   margin: 0;
   padding: 15px;
@@ -184,6 +201,7 @@ body {
 h3 {
   margin-top: 0;
 }
+
 </style>
 
 </head>
@@ -223,6 +241,19 @@ Updated:
 ${liveStatus.updatedAt}
 
 </div>
+
+<script>
+
+setTimeout(function () {
+
+  window.location.replace(
+    "/live-status?refresh=" +
+    Date.now()
+  );
+
+}, 1000);
+
+</script>
 
 </body>
 </html>
@@ -919,20 +950,9 @@ app.post(
     );
 
     updateLiveStatus(
-  "result",
-  "NEW CONVERT REQUEST"
-);
- 
-       updateLiveStatus(
-      "result",
-      "Conversion request received"
-    );
-
-    updateLiveStatus(
       "result",
       "Waiting"
     );
-
 
     if (!req.file) {
 
