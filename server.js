@@ -28,6 +28,98 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.get("/startup-test", (req, res) => {
+
+  const testOutput =
+    path.join(
+      OUTPUT_DIR,
+      "startup-test.mp4"
+    );
+
+  const testArgs = [
+
+    "-y",
+
+    "-f",
+    "lavfi",
+
+    "-i",
+    "color=c=black:s=256x144:r=15",
+
+    "-t",
+    "1",
+
+    "-c:v",
+    "mpeg4",
+
+    "-b:v",
+    "180k",
+
+    "-an",
+
+    testOutput
+
+  ];
+
+  execFile(
+    "ffmpeg",
+    testArgs,
+    {
+      maxBuffer:
+        10 * 1024 * 1024
+    },
+
+    (error, stdout, stderr) => {
+
+      if (error) {
+
+        console.error(
+          "Startup test failed:",
+          stderr
+        );
+
+        return res
+          .status(500)
+          .send(
+            "Startup test failed."
+          );
+
+      }
+
+      if (
+        !fs.existsSync(
+          testOutput
+        )
+      ) {
+
+        return res
+          .status(500)
+          .send(
+            "Startup test output was not created."
+          );
+
+      }
+
+      try {
+
+        fs.unlinkSync(
+          testOutput
+        );
+
+      }
+
+      catch (_) {}
+
+      return res.json({
+        success: true,
+        status: "ready"
+      });
+
+    }
+  );
+
+});
+
 app.get("/", (req, res) => {
 
   res.send(`
@@ -200,19 +292,34 @@ startTestButton.addEventListener(
   function () {
 
     startTestStatus.textContent =
-      "FETCH TEST STARTING";
+      "STARTUP TEST RUNNING";
 
-    fetch("/health")
+    startTestButton.disabled = true;
+
+    fetch(
+      "/startup-test?test=" +
+      Date.now()
+    )
       .then(
         function (response) {
 
-          startTestStatus.textContent =
-            "FETCH REQUEST WORKING";
+          if (
+            response.status === 200
+          ) {
 
-          console.log(
-            "Health response status:",
-            response.status
-          );
+            startTestStatus.textContent =
+              "STARTUP TEST PASSED";
+
+          }
+          else {
+
+            startTestStatus.textContent =
+              "STARTUP TEST FAILED";
+
+          }
+
+          startTestButton.disabled =
+            false;
 
         }
       )
@@ -220,12 +327,15 @@ startTestButton.addEventListener(
         function (error) {
 
           startTestStatus.textContent =
-            "FETCH REQUEST FAILED";
+            "STARTUP TEST FAILED";
 
           console.error(
-            "Fetch error:",
+            "Startup test error:",
             error
           );
+
+          startTestButton.disabled =
+            false;
 
         }
       );
