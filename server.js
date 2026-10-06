@@ -756,3 +756,15 @@ app.get(
 // Start server
 // --------------------------------------------------
 
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+
+    console.log(
+      "Cloud Button Phone Video Converter running on port " +
+      PORT
+    );
+
+  }
+);
