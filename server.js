@@ -26,6 +26,13 @@ const upload = multer({
 // Live debug status
 // --------------------------------------------------
 
+const LIVE_STATUS_FILE =
+  path.join(
+    "/tmp",
+    "live-status.json"
+  );
+
+
 let liveStatus = {
 
   server: "Ready",
@@ -48,6 +55,28 @@ let liveStatus = {
 };
 
 
+try {
+
+  if (
+    fs.existsSync(
+      LIVE_STATUS_FILE
+    )
+  ) {
+
+    liveStatus =
+      JSON.parse(
+        fs.readFileSync(
+          LIVE_STATUS_FILE,
+          "utf8"
+        )
+      );
+
+  }
+
+}
+catch (_) {}
+
+
 function updateLiveStatus(
   field,
   value
@@ -58,6 +87,22 @@ function updateLiveStatus(
 
   liveStatus.updatedAt =
     new Date().toISOString();
+
+
+  try {
+
+    fs.writeFileSync(
+      LIVE_STATUS_FILE,
+      JSON.stringify(
+        liveStatus,
+        null,
+        2
+      )
+    );
+
+  }
+
+  catch (_) {}
 
 }
 
