@@ -96,9 +96,77 @@ app.get(
   "/live-status",
   (req, res) => {
 
-    res.status(200).json(
-      liveStatus
-    );
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="1">
+<title>Live Server Status</title>
+
+<style>
+body {
+  margin: 0;
+  padding: 15px;
+  background: #111;
+  color: #fff;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.status {
+  padding: 15px;
+  background: #1f1f1f;
+  border: 1px solid #444;
+  border-radius: 8px;
+}
+
+h3 {
+  margin-top: 0;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="status">
+
+<h3>LIVE SERVER STATUS</h3>
+
+Server:
+${liveStatus.server}
+
+<br><br>
+
+Convert Request:
+${liveStatus.convertRequest}
+
+<br><br>
+
+File Upload:
+${liveStatus.fileUpload}
+
+<br><br>
+
+FFmpeg:
+${liveStatus.ffmpeg}
+
+<br><br>
+
+Result:
+${liveStatus.result}
+
+<br><br>
+
+Updated:
+${liveStatus.updatedAt}
+
+</div>
+
+</body>
+</html>
+`);
 
   }
 );
@@ -695,22 +763,16 @@ convertButton.addEventListener(
 
 </script>
 
-<div
-  id="liveDebugBox"
+<iframe
+  src="/live-status"
   style="
-    margin-top:15px;
-    padding:12px;
-    background:#1f1f1f;
-    border:1px solid #444;
+    width:100%;
+    height:300px;
+    border:0;
     border-radius:8px;
-    white-space:pre-wrap;
-    font-family:monospace;
-    font-size:13px;
+    background:#111;
   "
->
-LIVE SERVER STATUS
-Loading...
-</div>
+></iframe>
 
 <script>
 (function () {
