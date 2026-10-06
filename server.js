@@ -196,20 +196,8 @@ startTestButton.addEventListener(
       .then(
         function (response) {
 
-          if (response.ok) {
-
-            startTestStatus.textContent =
-              "SERVER CHECK PASSED";
-
-          }
-          else {
-
-            startTestStatus.textContent =
-              "SERVER CHECK FAILED\n\n" +
-              "HTTP Status: " +
-              response.status;
-
-          }
+          startTestStatus.textContent =
+            "FETCH REQUEST WORKING";
 
           console.log(
             "Health response status:",
