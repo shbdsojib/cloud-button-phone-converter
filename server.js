@@ -353,24 +353,7 @@ async function waitForServer() {
         }
       );
 
-      if (response.ok) {
-
-        serverReady = true;
-
-        convertButton.disabled = false;
-        driveButton.disabled = false;
-
-        statusBox.textContent =
-          "Server Ready.\n\n" +
-          "Select a video to begin.";
-
-        console.log(
-          "Conversion server is ready."
-        );
-
-        return;
-      }
-
+      
     } catch (error) {
 
       console.log(
