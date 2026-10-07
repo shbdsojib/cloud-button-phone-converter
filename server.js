@@ -768,9 +768,10 @@ async function convertVideo(file) {
 convertButton.addEventListener(
   "click",
   async function () {
-    console.log(
-      "CONVERT BUTTON CLICKED"
-    );
+  
+  statusBox.textContent =
+  "DEBUG: Convert button clicked";
+
     if (
       !videoFile.files ||
       !videoFile.files.length
