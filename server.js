@@ -822,22 +822,28 @@ convertButton.addEventListener(
 
     catch (error) {
 
-      console.log(
-        "Conversion failed:",
-        error
-      );
+  statusBox.textContent =
+    "DEBUG: Conversion catch reached.\n\n" +
+    "The request failed before conversion completed.";
+
+  console.log(
+    "Conversion failed:",
+    error
+  );
 
 
-      // --------------------------------------------
-      // Automatic recovery
-      // --------------------------------------------
+  // --------------------------------------------
+  // Automatic recovery
+  // --------------------------------------------
 
-      statusBox.textContent =
-        "First conversion attempt failed.\\n\\n" +
+  /*
+  statusBox.textContent =
+    "First conversion attempt failed.\n\n" +
 
-        "Reconnecting...\\n\\n" +
+    "Reconnecting...\n\n" +
 
-        "The page will reload automatically in 2 seconds.";
+    "The page will reload automatically in 2 seconds.";
+  */
 
 
       /*await delay(2000);*/
