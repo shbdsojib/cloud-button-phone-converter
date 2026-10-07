@@ -379,46 +379,6 @@ app.get("/startup-test", (req, res) => {
 
 });
 
-// --------------------------------------------------
-// Automatic Server Test Video
-// --------------------------------------------------
-
-app.get(
-  "/server-test-video",
-  (req, res) => {
-
-    const testVideo =
-      path.join(
-        __dirname,
-        "server-test-1sec.mp4"
-      );
-
-    if (
-      !fs.existsSync(
-        testVideo
-      )
-    ) {
-
-      return res
-        .status(404)
-        .send(
-          "Server test video not found."
-        );
-
-    }
-
-    res.set(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate"
-    );
-
-    return res.sendFile(
-      testVideo
-    );
-
-  }
-);
-
 app.get("/", (req, res) => {
 
   res.send(`
@@ -583,134 +543,61 @@ const startTestStatus =
 
 
 // --------------------------------------------------
-// Start Now - Full Server Conversion Test
+// Start Now test
 // --------------------------------------------------
 
 startTestButton.addEventListener(
   "click",
-  async function () {
-
-    startTestButton.disabled =
-      true;
-
-    convertButton.disabled =
-      true;
+  function () {
 
     startTestStatus.textContent =
-      "SERVER TEST RUNNING\n\n" +
-      "Preparing test video...";
+      "STARTUP TEST RUNNING";
 
+    startTestButton.disabled = true;
 
-    try {
+    fetch(
+      "/startup-test?test=" +
+      Date.now()
+    )
+      .then(
+        function (response) {
 
-      const testResponse =
-        await fetch(
-          "/server-test-video?test=" +
-          Date.now(),
-          {
-            method: "GET",
-            cache: "no-store"
+          if (
+            response.status === 200
+          ) {
+
+            startTestStatus.textContent =
+              "STARTUP TEST PASSED";
+
           }
-        );
+          else {
 
+            startTestStatus.textContent =
+              "STARTUP TEST FAILED";
 
-      if (
-        !testResponse.ok
-      ) {
-
-        throw new Error(
-          "Test video could not be loaded."
-        );
-
-      }
-
-
-      const testBlob =
-        await testResponse.blob();
-
-
-      startTestStatus.textContent =
-        "SERVER TEST RUNNING\n\n" +
-        "Uploading test video...";
-
-
-      const testFile =
-        new File(
-          [testBlob],
-          "server-test-1sec.mp4",
-          {
-            type: "video/mp4"
           }
-        );
 
+          startTestButton.disabled =
+            false;
 
-      startTestStatus.textContent =
-        "SERVER TEST RUNNING\n\n" +
-        "Testing upload and FFmpeg conversion...";
+        }
+      )
+      .catch(
+        function (error) {
 
+          startTestStatus.textContent =
+            "STARTUP TEST FAILED";
 
-      const result =
-        await convertVideo(
-          testFile
-        );
+          console.error(
+            "Startup test error:",
+            error
+          );
 
+          startTestButton.disabled =
+            false;
 
-      if (
-        !result ||
-        !result.success
-      ) {
-
-        throw new Error(
-          "Server test conversion failed."
-        );
-
-      }
-
-
-      startTestStatus.textContent =
-        "SERVER TEST SUCCESSFUL\n\n" +
-        "Server is ready for video conversion.";
-
-
-      convertButton.disabled =
-        false;
-
-      startTestButton.disabled =
-        false;
-
-    }
-
-
-    catch (error) {
-
-      console.error(
-        "Automatic server test failed:",
-        error
+        }
       );
-
-
-      startTestStatus.textContent =
-        "SERVER TEST FAILED\n\n" +
-        "Reconnecting...\n\n" +
-        "The page will reload automatically in 2 seconds.";
-
-
-      startTestButton.disabled =
-        true;
-
-      convertButton.disabled =
-        true;
-
-
-      await delay(
-        2000
-      );
-
-
-      window.location.href =
-        "/?version=2";
-
-    }
 
   }
 );
