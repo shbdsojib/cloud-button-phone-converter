@@ -941,8 +941,8 @@ convertButton.addEventListener(
 
 app.post(
   "/convert",
-  upload.single("video"),
-  async (req, res) => {
+
+  (req, res, next) => {
 
     updateLiveStatus(
       "convertRequest",
@@ -953,6 +953,52 @@ app.post(
       "result",
       "Waiting"
     );
+
+    upload.single("video")(
+      req,
+      res,
+      function (error) {
+
+        if (error) {
+
+          console.error(
+            "UPLOAD ERROR:",
+            error
+          );
+
+          updateLiveStatus(
+            "fileUpload",
+            "FAILED"
+          );
+
+          updateLiveStatus(
+            "ffmpeg",
+            "Not started"
+          );
+
+          updateLiveStatus(
+            "result",
+            "Upload failed: " +
+            error.message
+          );
+
+          return res
+            .status(500)
+            .send(
+              "Upload failed: " +
+              error.message
+            );
+
+        }
+
+        next();
+
+      }
+    );
+
+  },
+
+  async (req, res) => {
 
     if (!req.file) {
 
