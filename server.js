@@ -830,6 +830,8 @@ async function automaticServerTest() {
 
 }
 
+automaticServerTest();
+
 // --------------------------------------------------
 // Convert button
 // --------------------------------------------------
