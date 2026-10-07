@@ -768,9 +768,6 @@ async function convertVideo(file) {
 convertButton.addEventListener(
   "click",
   async function () {
-  
-  statusBox.textContent =
-  "DEBUG: Convert button clicked";
 
     if (
       !videoFile.files ||
@@ -822,10 +819,6 @@ convertButton.addEventListener(
 
     catch (error) {
 
-  statusBox.textContent =
-    "DEBUG: Conversion catch reached.\n\n" +
-    "The request failed before conversion completed.";
-
   console.log(
     "Conversion failed:",
     error
@@ -836,28 +829,25 @@ convertButton.addEventListener(
   // Automatic recovery
   // --------------------------------------------
 
-  /*
   statusBox.textContent =
-    "First conversion attempt failed.\n\n" +
-
-    "Reconnecting...\n\n" +
-
-    "The page will reload automatically in 2 seconds.";
-  */
+    "CONVERSION FAILED\n\n" +
+    "Error: " +
+    (error.message ||
+    "Unknown error");
 
 
-      /*await delay(2000);*/
+  /*await delay(2000);*/
 
 
-      // --------------------------------------------
-      // Reload as Version 2
-      // --------------------------------------------
+  // --------------------------------------------
+  // Reload as Version 2
+  // --------------------------------------------
 
-      /*window.location.href =
-        "/?version=2";*/
+  /*window.location.href =
+    "/?version=2";*/
 
-        return;
-    }
+  return;
+}
 
   }
 );
