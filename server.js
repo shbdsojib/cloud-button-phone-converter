@@ -1015,6 +1015,35 @@ async function runMainPageAutomaticTest() {
       "Main page automatic test: SUCCESS"
     );
 
+const notice =
+  document.getElementById(
+    "serverTestNotice"
+  );
+
+if (notice) {
+  notice.innerHTML =
+    "🎉 <strong>অভিনন্দন!</strong><br><br>" +
+    "সার্ভার সফলভাবে পরীক্ষা হয়েছে। " +
+    "এখন আপনি Converter স্বাভাবিকভাবে ব্যবহার করতে পারবেন।";
+
+  notice.style.background =
+    "#d1e7dd";
+
+  notice.style.color =
+    "#0f5132";
+
+  notice.style.borderColor =
+    "#badbcc";
+
+  setTimeout(
+    function () {
+      notice.style.display =
+        "none";
+    },
+    3000
+  );
+}
+
   }
 
   catch (error) {
