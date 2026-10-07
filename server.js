@@ -819,35 +819,36 @@ convertButton.addEventListener(
 
     catch (error) {
 
-  console.log(
-    "Conversion failed:",
-    error
-  );
+      console.log(
+        "Conversion failed:",
+        error
+      );
 
 
-  // --------------------------------------------
-  // Automatic recovery
-  // --------------------------------------------
+      // --------------------------------------------
+      // Automatic recovery
+      // --------------------------------------------
 
-  statusBox.textContent =
-    "CONVERSION FAILED\n\n" +
-    "Error: " +
-    (error.message ||
-    "Unknown error");
+      statusBox.textContent =
+        "First conversion attempt failed.\\n\\n" +
 
+        "Reconnecting...\\n\\n" +
 
-  /*await delay(2000);*/
+        "The page will reload automatically in 2 seconds.";
 
 
-  // --------------------------------------------
-  // Reload as Version 2
-  // --------------------------------------------
+      /*await delay(2000);*/
 
-  /*window.location.href =
-    "/?version=2";*/
 
-  return;
-}
+      // --------------------------------------------
+      // Reload as Version 2
+      // --------------------------------------------
+
+      /*window.location.href =
+        "/?version=2";*/
+
+        return;
+    }
 
   }
 );
