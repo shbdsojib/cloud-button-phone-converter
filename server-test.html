@@ -133,194 +133,145 @@
 
 
     testButton.addEventListener(
-      "click",
-      async function () {
+  "click",
+  async function () {
 
-        if (
-          !videoFile.files ||
-          !videoFile.files.length
-        ) {
+    if (
+      !videoFile.files ||
+      !videoFile.files.length
+    ) {
 
-          status.textContent =
-            "Please select a video first.";
+      status.textContent =
+        "Please select a video first.";
 
-          return;
+      return;
 
-        }
+    }
 
+    const file =
+      videoFile.files[0];
 
-        const file =
-          videoFile.files[0];
+    const sizeMB =
+      (
+        file.size /
+        1024 /
+        1024
+      ).toFixed(2);
 
+    testButton.disabled =
+      true;
 
-        const sizeMB =
-          (
-            file.size /
-            1024 /
-            1024
-          ).toFixed(2);
+    status.textContent =
+      "VERSION 1 TEST STARTING\n\n" +
+      "Starting real conversion request...\n\n" +
+      "File: " +
+      file.name +
+      "\n\n" +
+      "Size: " +
+      sizeMB +
+      " MB";
 
+    try {
 
-        testButton.disabled =
-          true;
+      const formData =
+        new FormData();
 
+      formData.append(
+        "video",
+        file
+      );
 
-        status.textContent =
-          "REQUEST STARTING\n\n" +
+      status.textContent =
+        "REAL CONVERSION REQUEST STARTED\n\n" +
+        "Sending video to /convert...\n\n" +
+        "Please wait.";
 
-          "File: " +
-          file.name +
+      const startTime =
+        Date.now();
 
-          "\n\n" +
-
-          "Size: " +
-          sizeMB +
-          " MB\n\n" +
-
-          "Creating upload request...";
-
-
-        try {
-
-          const formData =
-            new FormData();
-
-
-          formData.append(
-            "video",
-            file
-          );
-
-
-          status.textContent =
-            "REQUEST STARTED\n\n" +
-
-            "Uploading video to /convert...\n\n" +
-
-            "Please wait.";
-
-
-          const startTime =
-            Date.now();
-
-
-          const response =
-            await fetch(
-              "/convert",
-              {
-                method: "POST",
-                body: formData,
-                cache: "no-store"
-              }
-            );
-
-
-          const elapsed =
-            Date.now() -
-            startTime;
-
-
-          status.textContent =
-            "SERVER RESPONSE RECEIVED\n\n" +
-
-            "HTTP: " +
-            response.status +
-
-            "\n\n" +
-
-            "Time: " +
-            elapsed +
-            " ms\n\n" +
-
-            "Reading response...";
-
-
-          const responseText =
-            await response.text();
-
-
-          if (
-            !response.ok
-          ) {
-
-            throw new Error(
-              "HTTP " +
-              response.status +
-              "\n\n" +
-              responseText
-            );
-
+      const response =
+        await fetch(
+          "/convert",
+          {
+            method: "POST",
+            body: formData,
+            cache: "no-store"
           }
+        );
 
+      const elapsed =
+        Date.now() -
+        startTime;
 
-          status.textContent =
-            "CONVERSION SUCCESSFUL\n\n" +
+      const responseText =
+        await response.text();
 
-            "HTTP: " +
-            response.status +
+      if (
+        !response.ok
+      ) {
 
-            "\n\n" +
-
-            "Time: " +
-            elapsed +
-            " ms\n\n" +
-
-            responseText;
-
-        }
-
-
-        catch (error) {
-
-          status.textContent =
-            "CONVERSION REQUEST FAILED\n\n" +
-
-            "Error type:\n" +
-
-            (
-              error.name ||
-              "Unknown"
-            ) +
-
-            "\n\n" +
-
-            "Error message:\n" +
-
-            (
-              error.message ||
-              "No error message"
-            ) +
-
-            "\n\n" +
-
-            "File:\n" +
-
-            file.name +
-
-            "\n\n" +
-
-            "Size:\n" +
-
-            sizeMB +
-            " MB";
-
-          console.error(
-            "Real video test failed:",
-            error
-          );
-
-        }
-
-
-        finally {
-
-          testButton.disabled =
-            false;
-
-        }
+        throw new Error(
+          "HTTP " +
+          response.status +
+          "\n\n" +
+          responseText
+        );
 
       }
-    );
+
+      status.textContent =
+        "VERSION 1 — READY TO CONVERT\n\n" +
+        "REAL CONVERSION TEST SUCCESSFUL\n\n" +
+        "HTTP: " +
+        response.status +
+        "\n\n" +
+        "Time: " +
+        elapsed +
+        " ms\n\n" +
+        responseText;
+
+    }
+
+    catch (error) {
+
+      status.textContent =
+        "VERSION 2 — RELOAD REQUIRED\n\n" +
+        "REAL CONVERSION TEST FAILED\n\n" +
+        "Error type:\n" +
+        (
+          error.name ||
+          "Unknown"
+        ) +
+        "\n\n" +
+        "Error message:\n" +
+        (
+          error.message ||
+          "No error message"
+        ) +
+        "\n\n" +
+        "File:\n" +
+        file.name +
+        "\n\n" +
+        "Size:\n" +
+        sizeMB +
+        " MB";
+
+      console.error(
+        "Version test failed:",
+        error
+      );
+
+    }
+
+    finally {
+
+      testButton.disabled =
+        false;
+
+    }
+
+  }
+);
 
   </script>
 
