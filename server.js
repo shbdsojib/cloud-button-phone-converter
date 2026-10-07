@@ -936,6 +936,45 @@ startTestStatus.textContent =
 
 });
 
+// --------------------------------------------------
+// Automatic Server Test Video
+// --------------------------------------------------
+
+app.get(
+  "/server-test-video",
+  (req, res) => {
+
+    const testVideo =
+      path.join(
+        __dirname,
+        "server-test-1sec.mp4"
+      );
+
+    if (
+      !fs.existsSync(
+        testVideo
+      )
+    ) {
+
+      return res
+        .status(404)
+        .send(
+          "Server test video not found."
+        );
+
+    }
+
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate"
+    );
+
+    return res.sendFile(
+      testVideo
+    );
+
+  }
+);
 
 // --------------------------------------------------
 // Video conversion
