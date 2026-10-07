@@ -11,6 +11,7 @@ COPY package.json ./
 RUN npm install --omit=dev
 
 COPY server.js ./
+COPY server-test.html ./
 COPY server-test-1sec.mp4 ./
 
 ENV NODE_ENV=production
