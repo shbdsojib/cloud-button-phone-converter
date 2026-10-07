@@ -543,126 +543,61 @@ const startTestStatus =
 
 
 // --------------------------------------------------
-// Start Now - Safe Full Server Conversion Test
+// Start Now test
 // --------------------------------------------------
 
 startTestButton.addEventListener(
   "click",
-  async function () {
+  function () {
+
+    startTestStatus.textContent =
+      "STARTUP TEST RUNNING";
 
     startTestButton.disabled = true;
 
-    startTestStatus.textContent =
-      "SERVER TEST RUNNING\n\n" +
-      "Preparing test video...";
+    fetch(
+      "/startup-test?test=" +
+      Date.now()
+    )
+      .then(
+        function (response) {
 
-    try {
+          if (
+            response.status === 200
+          ) {
 
-      const testResponse =
-        await fetch(
-          "/server-test-video?test=" +
-          Date.now(),
-          {
-            method: "GET",
-            cache: "no-store"
+            startTestStatus.textContent =
+              "STARTUP TEST PASSED";
+
           }
-        );
+          else {
 
+            startTestStatus.textContent =
+              "STARTUP TEST FAILED";
 
-      if (!testResponse.ok) {
-
-        throw new Error(
-          "Test video could not be loaded."
-        );
-
-      }
-
-
-      const testBlob =
-        await testResponse.blob();
-
-
-      if (
-        !testBlob ||
-        testBlob.size === 0
-      ) {
-
-        throw new Error(
-          "Test video is empty."
-        );
-
-      }
-
-
-      startTestStatus.textContent =
-        "SERVER TEST RUNNING\n\n" +
-        "Uploading test video...";
-
-
-      const testFile =
-        new File(
-          [testBlob],
-          "server-test-1sec.mp4",
-          {
-            type: "video/mp4"
           }
-        );
 
+          startTestButton.disabled =
+            false;
 
-      startTestStatus.textContent =
-        "SERVER TEST RUNNING\n\n" +
-        "Testing upload and FFmpeg conversion...";
+        }
+      )
+      .catch(
+        function (error) {
 
+          startTestStatus.textContent =
+            "STARTUP TEST FAILED";
 
-      const result =
-        await convertVideo(
-          testFile
-        );
+          console.error(
+            "Startup test error:",
+            error
+          );
 
+          startTestButton.disabled =
+            false;
 
-      if (
-        !result ||
-        result.success !== true
-      ) {
-
-        throw new Error(
-          "Server test conversion failed."
-        );
-
-      }
-
-
-      startTestStatus.textContent =
-        "SERVER TEST SUCCESSFUL\n\n" +
-        "Server is ready for video conversion.";
-
-    }
-
-
-    catch (error) {
-
-      console.error(
-        "Automatic server test failed:",
-        error
+        }
       );
-
-
-      startTestStatus.textContent =
-        "SERVER TEST FAILED\n\n" +
-        "Server is not ready yet.";
-
-
-      return;
-
-    }
-
-
-    finally {
-
-      startTestButton.disabled =
-        false;
-
-    }
 
   }
 );
