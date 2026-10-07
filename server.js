@@ -821,36 +821,28 @@ startTestStatus.textContent =
 
     catch (error) {
 
-      console.log(
-        "Conversion failed:",
-        error
-      );
+  console.log(
+    "Conversion failed:",
+    error
+  );
 
+  statusBox.textContent =
+    "CONVERSION FAILED\n\n" +
 
-      // --------------------------------------------
-      // Automatic recovery
-      // --------------------------------------------
+    "Error type: " +
+    (error.name || "Unknown") +
 
-      statusBox.textContent =
-        "First conversion attempt failed.\\n\\n" +
+    "\n\n" +
 
-        "Reconnecting...\\n\\n" +
+    "Error message:\n" +
+    (error.message || "No error message") +
 
-        "The page will reload automatically in 2 seconds.";
+    "\n\n" +
 
+    "The server may not have received this request.";
 
-      /*await delay(2000);*/
-
-
-      // --------------------------------------------
-      // Reload as Version 2
-      // --------------------------------------------
-
-      /*window.location.href =
-        "/?version=2";*/
-
-        return;
-    }
+  return;
+}
 
   }
 );
