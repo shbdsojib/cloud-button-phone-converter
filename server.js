@@ -855,33 +855,6 @@ startTestStatus.textContent =
   }
 );
 
-window.addEventListener(
-  "message",
-  function (event) {
-
-    if (
-      event.origin !==
-      window.location.origin
-    ) {
-      return;
-    }
-
-    if (
-      !event.data ||
-      event.data.type !==
-      "CONVERSION_TEST"
-    ) {
-      return;
-    }
-
-    console.log(
-      "Background conversion test result:",
-      event.data.result
-    );
-
-  }
-);
-
 </script>
 
 <iframe
@@ -956,17 +929,93 @@ window.addEventListener(
 })();
 </script>
 
-<iframe
-  src="/server-test.html?background-test=1"
-  style="
-    display: none;
-    width: 0;
-    height: 0;
-    border: 0;
-    visibility: hidden;
-  "
-  title="Background conversion test"
-></iframe>
+<script>
+async function runMainPageAutomaticTest() {
+
+  try {
+
+    const videoResponse =
+      await fetch(
+        "/server-test-1sec.mp4?background-test=" +
+        Date.now(),
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
+    if (!videoResponse.ok) {
+      throw new Error(
+        "Test video HTTP " +
+        videoResponse.status
+      );
+    }
+
+    const videoBlob =
+      await videoResponse.blob();
+
+    const testFile =
+      new File(
+        [videoBlob],
+        "server-test-1sec.mp4",
+        {
+          type:
+            videoBlob.type ||
+            "video/mp4"
+        }
+      );
+
+    const formData =
+      new FormData();
+
+    formData.append(
+      "video",
+      testFile
+    );
+
+    const response =
+      await fetch(
+        "/convert",
+        {
+          method: "POST",
+          body: formData,
+          cache: "no-store"
+        }
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        "Conversion HTTP " +
+        response.status
+      );
+    }
+
+    console.log(
+      "Main page automatic test: SUCCESS"
+    );
+
+  }
+
+  catch (error) {
+
+    console.log(
+      "Main page automatic test: FAILED",
+      error
+    );
+
+    setTimeout(
+      function () {
+        window.location.reload();
+      },
+      2000
+    );
+
+  }
+
+}
+
+runMainPageAutomaticTest();
+</script>
 
 </body>
 
