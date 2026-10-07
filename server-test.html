@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Server Conversion Test</title>
+
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 15px;
+      background: #222;
+      white-space: pre-line;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Server Conversion Test</h2>
+
+  <button id="testButton">
+    Run Server Test
+  </button>
+
+  <div id="status">
+    Ready.
+  </div>
+
+
+  <script>
+
+    const testButton =
+      document.getElementById(
+        "testButton"
+      );
+
+    const status =
+      document.getElementById(
+        "status"
+      );
+
+
+    testButton.addEventListener(
+      "click",
+      async function () {
+
+        testButton.disabled = true;
+
+        status.textContent =
+          "SERVER TEST RUNNING\n\n" +
+          "Downloading test video...";
+
+
+        try {
+
+          const videoResponse =
+            await fetch(
+              "/server-test-video?test=" +
+              Date.now(),
+              {
+                cache: "no-store"
+              }
+            );
+
+
+          if (!videoResponse.ok) {
+
+            throw new Error(
+              "Test video download failed."
+            );
+
+          }
+
+
+          const blob =
+            await videoResponse.blob();
+
+
+          if (
+            !blob ||
+            blob.size === 0
+          ) {
+
+            throw new Error(
+              "Test video is empty."
+            );
+
+          }
+
+
+          status.textContent =
+            "SERVER TEST RUNNING\n\n" +
+            "Uploading test video...";
+
+
+          const file =
+            new File(
+              [blob],
+              "server-test-1sec.mp4",
+              {
+                type: "video/mp4"
+              }
+            );
+
+
+          const formData =
+            new FormData();
+
+
+          formData.append(
+            "video",
+            file
+          );
+
+
+          status.textContent =
+            "SERVER TEST RUNNING\n\n" +
+            "Sending to /convert...\n\n" +
+            "FFmpeg test is running.";
+
+
+          const response =
+            await fetch(
+              "/convert",
+              {
+                method: "POST",
+                body: formData
+              }
+            );
+
+
+          const text =
+            await response.text();
+
+
+          if (!response.ok) {
+
+            throw new Error(
+              text ||
+              "Server conversion failed."
+            );
+
+          }
+
+
+          status.textContent =
+            "SERVER TEST SUCCESSFUL\n\n" +
+            text;
+
+        }
+
+
+        catch (error) {
+
+          console.error(
+            error
+          );
+
+
+          status.textContent =
+            "SERVER TEST FAILED\n\n" +
+            error.message;
+
+        }
+
+
+        finally {
+
+          testButton.disabled =
+            false;
+
+        }
+
+      }
+    );
+
+  </script>
+
+</body>
+</html>
