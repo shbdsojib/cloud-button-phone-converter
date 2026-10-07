@@ -727,9 +727,6 @@ videoFile.addEventListener(
 
 async function convertVideo(file) {
 
-  startTestStatus.textContent =
-    "CONVERT REQUEST STARTED";
-
   const formData =
     new FormData();
 
@@ -789,6 +786,8 @@ convertButton.addEventListener(
 
     convertButton.disabled = true;
 
+startTestStatus.textContent =
+  "CONVERT CLICK REACHED";
 
     try {
 
