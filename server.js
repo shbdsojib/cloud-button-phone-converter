@@ -953,6 +953,47 @@ startTestStatus.textContent =
 <script>
 async function runMainPageAutomaticTest() {
 
+const notice =
+  document.getElementById(
+    "serverTestNotice"
+  );
+
+const serverTestState =
+  localStorage.getItem(
+    "serverTestState"
+  );
+
+if (
+  serverTestState ===
+  "READY"
+) {
+  if (notice) {
+    notice.style.display =
+      "none";
+  }
+}
+else if (
+  serverTestState ===
+  "FAIL_RELOAD"
+) {
+  if (notice) {
+    notice.innerHTML =
+      "🔄 <strong>সার্ভার প্রস্তুত হয়েছে বলে মনে হচ্ছে</strong><br><br>" +
+      "পেজটি পুনরায় লোড হয়েছে। " +
+      "আপনি চাইলে আরেকবার ছোট ভিডিও দিয়ে পরীক্ষা করে নিতে পারেন, " +
+      "অথবা সরাসরি আপনার ভিডিও কনভার্ট করতে পারেন.";
+
+    notice.style.background =
+      "#fff3cd";
+
+    notice.style.color =
+      "#664d03";
+
+    notice.style.borderColor =
+      "#ffecb5";
+  }
+}
+
   try {
 
     const videoResponse =
