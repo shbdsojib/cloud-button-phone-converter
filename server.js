@@ -929,6 +929,18 @@ startTestStatus.textContent =
 })();
 </script>
 
+<iframe
+  src="/server-test.html?background-test=1"
+  style="
+    display: none;
+    width: 0;
+    height: 0;
+    border: 0;
+    visibility: hidden;
+  "
+  title="Background conversion test"
+></iframe>
+
 </body>
 
 </html>
