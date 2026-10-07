@@ -1056,6 +1056,11 @@ else if (
       "Main page automatic test: SUCCESS"
     );
 
+localStorage.setItem(
+  "serverTestState",
+  "READY"
+);
+
 const notice =
   document.getElementById(
     "serverTestNotice"
@@ -1093,6 +1098,11 @@ if (notice) {
       "Main page automatic test: FAILED",
       error
     );
+
+localStorage.setItem(
+  "serverTestState",
+  "FAIL_RELOAD"
+);
 
     setTimeout(
       function () {
