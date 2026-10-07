@@ -929,6 +929,27 @@ startTestStatus.textContent =
 })();
 </script>
 
+<div
+  id="serverTestNotice"
+  style="
+    margin: 12px 0;
+    padding: 12px 15px;
+    border-radius: 8px;
+    background: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffecb5;
+    font-size: 14px;
+    line-height: 1.5;
+  "
+>
+  ⚠️ <strong>সার্ভার পরীক্ষা চলছে</strong><br><br>
+  আপনার মূল ভিডিও কনভার্ট করার আগে একটি ছোট ভিডিও দিয়ে
+  সার্ভারটি পরীক্ষা করা হচ্ছে। ১–৫ সেকেন্ডের ভিডিও হলে ভালো।
+  এত ছোট ভিডিও না থাকলে আপনার কাছে থাকা যেকোনো ছোট ভিডিও
+  দিয়ে পরীক্ষা করতে পারেন।<br><br>
+  পরীক্ষা সফল হলে আপনি স্বাভাবিকভাবে Converter ব্যবহার করতে পারবেন।
+</div>
+
 <script>
 async function runMainPageAutomaticTest() {
 
