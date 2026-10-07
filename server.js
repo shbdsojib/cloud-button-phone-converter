@@ -514,6 +514,13 @@ Target: 144p • MPEG-4 Part 2 • MP4 • 15 FPS • AAC mono 32 kbps
 Convert Local Video
 </button>
 
+<button
+  id="connectionTestButton"
+  type="button"
+>
+  Test Server Connection
+</button>
+
 <div id="status">
 Ready For Convert V1
 
