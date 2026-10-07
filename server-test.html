@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Server Conversion Test</title>
 
   <style>
+
     body {
       background: #111;
       color: #fff;
@@ -27,14 +33,18 @@
       white-space: pre-line;
       border-radius: 8px;
     }
+
   </style>
+
 </head>
 
 <body>
 
   <h2>Server Conversion Test</h2>
 
-  <button id="testButton">
+  <button
+    id="testButton"
+  >
     Run Server Test
   </button>
 
@@ -60,11 +70,12 @@
       "click",
       async function () {
 
-        testButton.disabled = true;
+        testButton.disabled =
+          true;
 
         status.textContent =
-          "SERVER TEST RUNNING\n\n" +
-          "Downloading test video...";
+          "TEST RUNNING\n\n" +
+          "Attempt started...";
 
 
         try {
@@ -74,15 +85,19 @@
               "/server-test-video?test=" +
               Date.now(),
               {
+                method: "GET",
                 cache: "no-store"
               }
             );
 
 
-          if (!videoResponse.ok) {
+          if (
+            !videoResponse.ok
+          ) {
 
             throw new Error(
-              "Test video download failed."
+              "Test video request failed. HTTP " +
+              videoResponse.status
             );
 
           }
@@ -105,8 +120,11 @@
 
 
           status.textContent =
-            "SERVER TEST RUNNING\n\n" +
-            "Uploading test video...";
+            "TEST RUNNING\n\n" +
+            "Test video received: " +
+            blob.size +
+            " bytes\n\n" +
+            "Sending to /convert...";
 
 
           const file =
@@ -129,10 +147,8 @@
           );
 
 
-          status.textContent =
-            "SERVER TEST RUNNING\n\n" +
-            "Sending to /convert...\n\n" +
-            "FFmpeg test is running.";
+          const startTime =
+            Date.now();
 
 
           const response =
@@ -140,20 +156,30 @@
               "/convert",
               {
                 method: "POST",
-                body: formData
+                body: formData,
+                cache: "no-store"
               }
             );
 
 
-          const text =
+          const elapsed =
+            Date.now() -
+            startTime;
+
+
+          const responseText =
             await response.text();
 
 
-          if (!response.ok) {
+          if (
+            !response.ok
+          ) {
 
             throw new Error(
-              text ||
-              "Server conversion failed."
+              "HTTP " +
+              response.status +
+              "\n\n" +
+              responseText
             );
 
           }
@@ -161,21 +187,45 @@
 
           status.textContent =
             "SERVER TEST SUCCESSFUL\n\n" +
-            text;
+
+            "HTTP: " +
+            response.status +
+
+            "\n\n" +
+
+            "Time: " +
+            elapsed +
+            " ms\n\n" +
+
+            responseText;
 
         }
 
 
         catch (error) {
 
-          console.error(
-            error
-          );
-
-
           status.textContent =
             "SERVER TEST FAILED\n\n" +
-            error.message;
+
+            "Error type: " +
+            (
+              error.name ||
+              "Unknown"
+            ) +
+
+            "\n\n" +
+
+            "Error message:\n" +
+
+            (
+              error.message ||
+              "No error message"
+            );
+
+          console.error(
+            "Server test failed:",
+            error
+          );
 
         }
 
