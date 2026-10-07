@@ -9,7 +9,7 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Server Conversion Test</title>
+  <title>Real Video Conversion Test</title>
 
   <style>
 
@@ -20,9 +20,14 @@
       padding: 20px;
     }
 
+    input,
     button {
-      padding: 12px 20px;
+      margin-top: 10px;
+      padding: 12px;
       font-size: 16px;
+    }
+
+    button {
       cursor: pointer;
     }
 
@@ -30,8 +35,9 @@
       margin-top: 20px;
       padding: 15px;
       background: #222;
-      white-space: pre-line;
       border-radius: 8px;
+      white-space: pre-line;
+      word-break: break-word;
     }
 
   </style>
@@ -40,20 +46,33 @@
 
 <body>
 
-  <h2>Server Conversion Test</h2>
+  <h2>Real Video Conversion Test</h2>
+
+  <input
+    type="file"
+    id="videoFile"
+    accept="video/*"
+  >
+
+  <br>
 
   <button
     id="testButton"
   >
-    Run Server Test
+    Test Real Video
   </button>
 
   <div id="status">
-    Ready.
+    Select a video.
   </div>
 
 
   <script>
+
+    const videoFile =
+      document.getElementById(
+        "videoFile"
+      );
 
     const testButton =
       document.getElementById(
@@ -66,76 +85,102 @@
       );
 
 
+    videoFile.addEventListener(
+      "change",
+      function () {
+
+        if (
+          !videoFile.files ||
+          !videoFile.files.length
+        ) {
+
+          status.textContent =
+            "No video selected.";
+
+          return;
+
+        }
+
+
+        const file =
+          videoFile.files[0];
+
+
+        const sizeMB =
+          (
+            file.size /
+            1024 /
+            1024
+          ).toFixed(2);
+
+
+        status.textContent =
+          "VIDEO SELECTED\n\n" +
+
+          "File: " +
+          file.name +
+
+          "\n\n" +
+
+          "Size: " +
+          sizeMB +
+          " MB\n\n" +
+
+          "Press Test Real Video.";
+
+      }
+    );
+
+
     testButton.addEventListener(
       "click",
       async function () {
 
+        if (
+          !videoFile.files ||
+          !videoFile.files.length
+        ) {
+
+          status.textContent =
+            "Please select a video first.";
+
+          return;
+
+        }
+
+
+        const file =
+          videoFile.files[0];
+
+
+        const sizeMB =
+          (
+            file.size /
+            1024 /
+            1024
+          ).toFixed(2);
+
+
         testButton.disabled =
           true;
 
+
         status.textContent =
-          "TEST RUNNING\n\n" +
-          "Attempt started...";
+          "REQUEST STARTING\n\n" +
+
+          "File: " +
+          file.name +
+
+          "\n\n" +
+
+          "Size: " +
+          sizeMB +
+          " MB\n\n" +
+
+          "Creating upload request...";
 
 
         try {
-
-          const videoResponse =
-            await fetch(
-              "/server-test-video?test=" +
-              Date.now(),
-              {
-                method: "GET",
-                cache: "no-store"
-              }
-            );
-
-
-          if (
-            !videoResponse.ok
-          ) {
-
-            throw new Error(
-              "Test video request failed. HTTP " +
-              videoResponse.status
-            );
-
-          }
-
-
-          const blob =
-            await videoResponse.blob();
-
-
-          if (
-            !blob ||
-            blob.size === 0
-          ) {
-
-            throw new Error(
-              "Test video is empty."
-            );
-
-          }
-
-
-          status.textContent =
-            "TEST RUNNING\n\n" +
-            "Test video received: " +
-            blob.size +
-            " bytes\n\n" +
-            "Sending to /convert...";
-
-
-          const file =
-            new File(
-              [blob],
-              "server-test-1sec.mp4",
-              {
-                type: "video/mp4"
-              }
-            );
-
 
           const formData =
             new FormData();
@@ -145,6 +190,14 @@
             "video",
             file
           );
+
+
+          status.textContent =
+            "REQUEST STARTED\n\n" +
+
+            "Uploading video to /convert...\n\n" +
+
+            "Please wait.";
 
 
           const startTime =
@@ -167,6 +220,21 @@
             startTime;
 
 
+          status.textContent =
+            "SERVER RESPONSE RECEIVED\n\n" +
+
+            "HTTP: " +
+            response.status +
+
+            "\n\n" +
+
+            "Time: " +
+            elapsed +
+            " ms\n\n" +
+
+            "Reading response...";
+
+
           const responseText =
             await response.text();
 
@@ -186,7 +254,7 @@
 
 
           status.textContent =
-            "SERVER TEST SUCCESSFUL\n\n" +
+            "CONVERSION SUCCESSFUL\n\n" +
 
             "HTTP: " +
             response.status +
@@ -205,9 +273,10 @@
         catch (error) {
 
           status.textContent =
-            "SERVER TEST FAILED\n\n" +
+            "CONVERSION REQUEST FAILED\n\n" +
 
-            "Error type: " +
+            "Error type:\n" +
+
             (
               error.name ||
               "Unknown"
@@ -220,10 +289,23 @@
             (
               error.message ||
               "No error message"
-            );
+            ) +
+
+            "\n\n" +
+
+            "File:\n" +
+
+            file.name +
+
+            "\n\n" +
+
+            "Size:\n" +
+
+            sizeMB +
+            " MB";
 
           console.error(
-            "Server test failed:",
+            "Real video test failed:",
             error
           );
 
