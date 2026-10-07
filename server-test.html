@@ -261,6 +261,17 @@
         error
       );
 
+      await new Promise(
+        function (resolve) {
+          setTimeout(
+            resolve,
+            2000
+          );
+        }
+      );
+
+      window.location.reload();
+
     }
 
     finally {
