@@ -990,6 +990,18 @@ app.get(
   }
 );
 
+app.get(
+  "/server-test-1sec.mp4",
+  (req, res) => {
+    return res.sendFile(
+      path.join(
+        __dirname,
+        "server-test-1sec.mp4"
+      )
+    );
+  }
+);
+
 // --------------------------------------------------
 // Video conversion
 // --------------------------------------------------
