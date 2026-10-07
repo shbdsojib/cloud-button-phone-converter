@@ -514,13 +514,6 @@ Target: 144p • MPEG-4 Part 2 • MP4 • 15 FPS • AAC mono 32 kbps
 Convert Local Video
 </button>
 
-<button
-  id="connectionTestButton"
-  type="button"
->
-  Test Server Connection
-</button>
-
 <div id="status">
 Ready For Convert V1
 
@@ -734,6 +727,9 @@ videoFile.addEventListener(
 
 async function convertVideo(file) {
 
+  startTestStatus.textContent =
+    "CONVERT REQUEST STARTED";
+
   const formData =
     new FormData();
 
@@ -855,75 +851,6 @@ convertButton.addEventListener(
         "/?version=2";*/
 
         return;
-    }
-
-  }
-);
-
-//==========
-const connectionTestButton =
-  document.getElementById(
-    "connectionTestButton"
-  );
-
-connectionTestButton.addEventListener(
-  "click",
-  async function () {
-
-    connectionTestButton.disabled =
-      true;
-
-    connectionTestButton.textContent =
-      "Testing...";
-
-    try {
-
-      const response =
-        await fetch(
-          "/health?test=" +
-          Date.now(),
-          {
-            method: "GET",
-            cache: "no-store"
-          }
-        );
-
-      if (!response.ok) {
-
-        throw new Error(
-          "HTTP " +
-          response.status
-        );
-
-      }
-
-      const result =
-        await response.json();
-
-      statusBox.textContent =
-        "SERVER CONNECTION TEST: PASSED\n\n" +
-        "Server response: " +
-        result.status;
-
-    }
-
-    catch (error) {
-
-      statusBox.textContent =
-        "SERVER CONNECTION TEST: FAILED\n\n" +
-        "Error: " +
-        error.message;
-
-    }
-
-    finally {
-
-      connectionTestButton.disabled =
-        false;
-
-      connectionTestButton.textContent =
-        "Test Server Connection";
-
     }
 
   }
