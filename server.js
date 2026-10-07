@@ -656,7 +656,7 @@ async function warmUpServer() {
 
 }
 
-warmUpServer();
+/*warmUpServer();*/
 
 
 // --------------------------------------------------
