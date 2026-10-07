@@ -765,6 +765,92 @@ async function convertVideo(file) {
 // Convert button
 // --------------------------------------------------
 
+// --------------------------------------------------
+// Connection Test
+// --------------------------------------------------
+
+const connectionTestButton =
+  document.createElement("button");
+
+connectionTestButton.type =
+  "button";
+
+connectionTestButton.textContent =
+  "Test Server Connection";
+
+connectionTestButton.style.marginTop =
+  "10px";
+
+convertButton.parentNode.appendChild(
+  connectionTestButton
+);
+
+
+connectionTestButton.addEventListener(
+  "click",
+  async function () {
+
+    connectionTestButton.disabled =
+      true;
+
+    connectionTestButton.textContent =
+      "Testing...";
+
+    try {
+
+      const response =
+        await fetch(
+          "/health?test=" +
+          Date.now(),
+          {
+            method: "GET",
+            cache: "no-store"
+          }
+        );
+
+      if (!response.ok) {
+
+        throw new Error(
+          "HTTP " +
+          response.status
+        );
+
+      }
+
+      const result =
+        await response.json();
+
+      statusBox.textContent =
+        "SERVER CONNECTION TEST: PASSED\n\n" +
+        "Server response: " +
+        result.status;
+
+    }
+
+    catch (error) {
+
+      statusBox.textContent =
+        "SERVER CONNECTION TEST: FAILED\n\n" +
+        "Error: " +
+        error.message;
+
+    }
+
+    finally {
+
+      connectionTestButton.disabled =
+        false;
+
+      connectionTestButton.textContent =
+        "Test Server Connection";
+
+    }
+
+  }
+);
+
+//
+
 convertButton.addEventListener(
   "click",
   async function () {
