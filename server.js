@@ -976,6 +976,20 @@ app.get(
   }
 );
 
+app.get(
+  "/server-test.html",
+  (req, res) => {
+
+    return res.sendFile(
+      path.join(
+        __dirname,
+        "server-test.html"
+      )
+    );
+
+  }
+);
+
 // --------------------------------------------------
 // Video conversion
 // --------------------------------------------------
