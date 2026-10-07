@@ -855,6 +855,33 @@ startTestStatus.textContent =
   }
 );
 
+window.addEventListener(
+  "message",
+  function (event) {
+
+    if (
+      event.origin !==
+      window.location.origin
+    ) {
+      return;
+    }
+
+    if (
+      !event.data ||
+      event.data.type !==
+      "CONVERSION_TEST"
+    ) {
+      return;
+    }
+
+    console.log(
+      "Background conversion test result:",
+      event.data.result
+    );
+
+  }
+);
+
 </script>
 
 <iframe
