@@ -727,6 +727,10 @@ videoFile.addEventListener(
 
 async function convertVideo(file) {
 
+  console.log(
+    "CONVERT: function started"
+  );
+
   const formData =
     new FormData();
 
@@ -735,19 +739,61 @@ async function convertVideo(file) {
     file
   );
 
-  const response =
-    await fetch(
-      "/convert",
-      {
-        method: "POST",
-        body: formData
-      }
+  console.log(
+    "CONVERT: FormData created"
+  );
+
+  statusBox.textContent =
+    "Starting upload request...";
+
+  console.log(
+    "CONVERT: Sending fetch request..."
+  );
+
+  let response;
+
+  try {
+
+    response =
+      await fetch(
+        "/convert",
+        {
+          method: "POST",
+          body: formData
+        }
+      );
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "CONVERT FETCH ERROR:",
+      error
     );
+
+    statusBox.textContent =
+      "Upload request failed.\n\n" +
+      "The request could not reach the server.";
+
+    throw error;
+
+  }
+
+  console.log(
+    "CONVERT: Server response received",
+    response.status
+  );
 
   if (!response.ok) {
 
     const errorText =
       await response.text();
+
+    console.error(
+      "CONVERT SERVER ERROR:",
+      errorText
+    );
 
     throw new Error(
       errorText ||
@@ -755,6 +801,10 @@ async function convertVideo(file) {
     );
 
   }
+
+  console.log(
+    "CONVERT: Server response OK"
+  );
 
   return await response.json();
 
