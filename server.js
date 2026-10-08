@@ -3,1319 +3,75 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const { execFile } = require("child_process");
+const { google } = require("googleapis");
 
 const app = express();
-
 const PORT = process.env.PORT || 10000;
 
-const UPLOAD_DIR = "/tmp/uploads";
-const OUTPUT_DIR = "/tmp/outputs";
+// ======================================================
+// Folders
+// ======================================================
 
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+const uploadDir = "/tmp/uploads";
+const outputDir = "/tmp/outputs";
+
+fs.mkdirSync(uploadDir, { recursive: true });
+fs.mkdirSync(outputDir, { recursive: true });
+
+
+// ======================================================
+// Multer
+// ======================================================
 
 const upload = multer({
-  dest: UPLOAD_DIR,
+  dest: uploadDir,
   limits: {
     fileSize: 500 * 1024 * 1024
   }
 });
 
 
-// --------------------------------------------------
-// Live debug status
-// --------------------------------------------------
+// ======================================================
+// Google configuration
+// ======================================================
 
-const LIVE_STATUS_FILE =
-  path.join(
-    "/tmp",
-    "live-status.json"
-  );
+const GOOGLE_CLIENT_ID =
+  process.env.GOOGLE_CLIENT_ID || "";
 
+const GOOGLE_API_KEY =
+  process.env.GOOGLE_API_KEY || "";
 
-let liveStatus = {
-
-  server: "Ready",
-
-  convertRequest:
-    "Waiting",
-
-  fileUpload:
-    "Waiting",
-
-  ffmpeg:
-    "Waiting",
-
-  result:
-    "Waiting",
-
-  updatedAt:
-    new Date().toISOString()
-
-};
+const GOOGLE_APP_ID =
+  "54132452919";
 
 
-try {
+// ======================================================
+// Helper: safe filename
+// ======================================================
 
-  if (
-    fs.existsSync(
-      LIVE_STATUS_FILE
-    )
-  ) {
+function safeBaseName(filename) {
 
-    liveStatus =
-      JSON.parse(
-        fs.readFileSync(
-          LIVE_STATUS_FILE,
-          "utf8"
-        )
-      );
-
-  }
-
-}
-catch (_) {}
-
-
-function updateLiveStatus(
-  field,
-  value
-) {
-
-  liveStatus[field] =
-    value;
-
-  liveStatus.updatedAt =
-    new Date().toISOString();
-
-
-  try {
-
-    fs.writeFileSync(
-      LIVE_STATUS_FILE,
-      JSON.stringify(
-        liveStatus,
-        null,
-        2
-      )
-    );
-
-  }
-
-  catch (_) {}
-
+  return path.parse(filename)
+    .name
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .slice(0, 120);
 }
 
 
-// --------------------------------------------------
-// Health
-// --------------------------------------------------
+// ======================================================
+// Helper: FFmpeg conversion
+// ======================================================
 
-app.get(
-  "/health",
-  (req, res) => {
+function convertVideo(inputPath, outputPath) {
 
-    updateLiveStatus(
-      "server",
-      "Ready"
-    );
-
-    res.status(200).json({
-
-      success: true,
-
-      status:
-        "ready"
-
-    });
-
-  }
-);
-
-
-// --------------------------------------------------
-// Live status API
-// --------------------------------------------------
-
-app.get(
-  "/live-status",
-  (req, res) => {
-
-    res.set(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate, proxy-revalidate"
-    );
-
-    res.set(
-      "Pragma",
-      "no-cache"
-    );
-
-    res.set(
-      "Expires",
-      "0"
-    );
-
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-
-<meta charset="UTF-8">
-
-<meta
-  http-equiv="Cache-Control"
-  content="no-cache, no-store, must-revalidate"
->
-
-<meta
-  http-equiv="Pragma"
-  content="no-cache"
->
-
-<meta
-  http-equiv="Expires"
-  content="0"
->
-
-<title>Live Server Status</title>
-
-<style>
-
-body {
-  margin: 0;
-  padding: 15px;
-  background: #111;
-  color: #fff;
-  font-family: monospace;
-  font-size: 14px;
-}
-
-.status {
-  padding: 15px;
-  background: #1f1f1f;
-  border: 1px solid #444;
-  border-radius: 8px;
-}
-
-h3 {
-  margin-top: 0;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="status">
-
-<h3>LIVE SERVER STATUS</h3>
-
-Server:
-${liveStatus.server}
-
-<br><br>
-
-Convert Request:
-${liveStatus.convertRequest}
-
-<br><br>
-
-File Upload:
-${liveStatus.fileUpload}
-
-<br><br>
-
-FFmpeg:
-${liveStatus.ffmpeg}
-
-<br><br>
-
-Result:
-${liveStatus.result}
-
-<br><br>
-
-Updated:
-${liveStatus.updatedAt}
-
-</div>
-
-<script>
-
-setTimeout(function () {
-
-  window.location.replace(
-    "/live-status?refresh=" +
-    Date.now()
-  );
-
-}, 1000);
-
-</script>
-
-</body>
-</html>
-`);
-
-  }
-);
-
-app.get("/startup-test", (req, res) => {
-
-  const testOutput =
-    path.join(
-      OUTPUT_DIR,
-      "startup-test.mp4"
-    );
-
-  const testArgs = [
-
-    "-y",
-
-    "-f",
-    "lavfi",
-
-    "-i",
-    "testsrc=size=256x144:rate=15",
-
-    "-f",
-    "lavfi",
-
-    "-i",
-    "anullsrc=channel_layout=mono:sample_rate=44100",
-
-    "-t",
-    "2",
-
-    "-vf",
-    "scale=256:144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2",
-
-    "-r",
-    "15",
-
-    "-c:v",
-    "mpeg4",
-
-    "-b:v",
-    "180k",
-
-    "-c:a",
-    "aac",
-
-    "-ac",
-    "1",
-
-    "-b:a",
-    "32k",
-
-    "-ar",
-    "44100",
-
-    "-movflags",
-    "+faststart",
-
-    testOutput
-
-  ];
-
-  execFile(
-    "ffmpeg",
-    testArgs,
-    {
-      maxBuffer:
-        10 * 1024 * 1024
-    },
-
-    (error, stdout, stderr) => {
-
-      if (error) {
-
-        console.error(
-          "Startup test failed:",
-          stderr
-        );
-
-        return res
-          .status(500)
-          .send(
-            "Startup test failed."
-          );
-
-      }
-
-      if (
-        !fs.existsSync(
-          testOutput
-        )
-      ) {
-
-        return res
-          .status(500)
-          .send(
-            "Startup test output was not created."
-          );
-
-      }
-
-      try {
-
-        fs.unlinkSync(
-          testOutput
-        );
-
-      }
-
-      catch (_) {}
-
-      return res.json({
-        success: true,
-        status: "ready"
-      });
-
-    }
-  );
-
-});
-
-app.get("/", (req, res) => {
-
-  res.send(`
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1"
->
-
-<title>Button Phone Video Converter</title>
-
-<style>
-
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: white;
-  margin: 0;
-  padding: 20px;
-}
-
-.container {
-  max-width: 600px;
-  margin: 30px auto;
-}
-
-.box {
-  background: #222;
-  padding: 20px;
-  border-radius: 12px;
-}
-
-h1 {
-  font-size: 24px;
-}
-
-input,
-button {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 14px;
-  margin-top: 15px;
-  border-radius: 8px;
-  border: none;
-}
-
-button {
-  background: #1976d2;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-button:disabled {
-  background: #555;
-  cursor: not-allowed;
-}
-
-#status {
-  margin-top: 20px;
-  padding: 15px;
-  background: #292929;
-  border-radius: 8px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-a {
-  color: #4ade80;
-  font-size: 18px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="container">
-
-<div class="box">
-
-// add start now 1
-<button
-  id="startTestButton"
-  type="button"
->
-  Start Now
-</button>
-
-<div
-  id="startTestStatus"
-  style="
-    margin-top:10px;
-    padding:10px;
-    background:#292929;
-    border-radius:8px;
-    white-space:pre-wrap;
-  "
->
-Ready for Start Now test.
-</div>
-
-// add start now 1 end
-
-<h1>
-Cloud Button Phone Video Converter
-</h1>
-
-<p>
-Clean Local Testing Version
-</p>
-
-<p>
-Target: 144p • MPEG-4 Part 2 • MP4 • 15 FPS • AAC mono 32 kbps
-</p>
-
-<input
-  id="videoFile"
-  type="file"
-  accept="video/*"
->
-
-<button
-  id="convertButton"
->
-Convert Local Video
-</button>
-
-<div id="status">
-Ready For Convert V1
-
-Select a video to begin.
-</div>
-
-</div>
-
-</div>
-
-<script>
-
-const videoFile =
-  document.getElementById("videoFile");
-
-const convertButton =
-  document.getElementById("convertButton");
-
-const statusBox =
-  document.getElementById("status");
-
-const startTestButton =
-  document.getElementById("startTestButton");
-
-const startTestStatus =
-  document.getElementById("startTestStatus");
-
-
-// --------------------------------------------------
-// Start Now test
-// --------------------------------------------------
-
-startTestButton.addEventListener(
-  "click",
-  function () {
-
-    startTestStatus.textContent =
-      "STARTUP TEST RUNNING";
-
-    startTestButton.disabled = true;
-
-    fetch(
-      "/startup-test?test=" +
-      Date.now()
-    )
-      .then(
-        function (response) {
-
-          if (
-            response.status === 200
-          ) {
-
-            startTestStatus.textContent =
-              "STARTUP TEST PASSED";
-
-          }
-          else {
-
-            startTestStatus.textContent =
-              "STARTUP TEST FAILED";
-
-          }
-
-          startTestButton.disabled =
-            false;
-
-        }
-      )
-      .catch(
-        function (error) {
-
-          startTestStatus.textContent =
-            "STARTUP TEST FAILED";
-
-          console.error(
-            "Startup test error:",
-            error
-          );
-
-          startTestButton.disabled =
-            false;
-
-        }
-      );
-
-  }
-);
-
-
-// --------------------------------------------------
-// Version check
-// --------------------------------------------------
-
-const urlParams =
-  new URLSearchParams(
-    window.location.search
-  );
-
-if (
-  urlParams.get("version") === "2"
-) {
-
-  statusBox.textContent =
-    "Ready For Convert V2\\n\\n" +
-    "Select a video to begin.";
-
-}
-
-
-// --------------------------------------------------
-// Background server warm-up
-// --------------------------------------------------
-
-async function warmUpServer() {
-
-  try {
-
-    await fetch(
-      "/health?warmup=" + Date.now(),
-      {
-        method: "GET",
-        cache: "no-store"
-      }
-    );
-
-    console.log(
-      "Server warm-up request completed."
-    );
-
-  }
-
-  catch (error) {
-
-    console.log(
-      "Background warm-up request:",
-      error.message
-    );
-
-  }
-
-}
-
-/*warmUpServer();*/
-
-
-// --------------------------------------------------
-// Delay helper
-// --------------------------------------------------
-
-function delay(ms) {
-
-  return new Promise(
-    resolve =>
-      setTimeout(resolve, ms)
-  );
-
-}
-
-
-// --------------------------------------------------
-// Video selection
-// --------------------------------------------------
-
-videoFile.addEventListener(
-  "change",
-  function () {
-
-    if (
-      !videoFile.files ||
-      !videoFile.files.length
-    ) {
-
-      statusBox.textContent =
-        "No video selected.";
-
-      return;
-
-    }
-
-    const file =
-      videoFile.files[0];
-
-    const sizeMB =
-      (
-        file.size /
-        1024 /
-        1024
-      ).toFixed(2);
-
-    statusBox.textContent =
-      "Video selected successfully.\\n\\n" +
-
-      "File: " +
-      file.name +
-
-      "\\n" +
-
-      "Size: " +
-      sizeMB +
-      " MB\\n\\n" +
-
-      "Press Convert to start.";
-
-  }
-);
-
-
-// --------------------------------------------------
-// Upload + conversion
-// --------------------------------------------------
-
-async function convertVideo(file) {
-
-  const formData =
-    new FormData();
-
-  formData.append(
-    "video",
-    file
-  );
-
-  const response =
-    await fetch(
-      "/convert",
-      {
-        method: "POST",
-        body: formData
-      }
-    );
-
-  if (!response.ok) {
-
-    const errorText =
-      await response.text();
-
-    throw new Error(
-      errorText ||
-      "Server conversion failed."
-    );
-
-  }
-
-  return await response.json();
-
-}
-
-
-// --------------------------------------------------
-// Convert button
-// --------------------------------------------------
-
-convertButton.addEventListener(
-  "click",
-  async function () {
-
-    if (
-      !videoFile.files ||
-      !videoFile.files.length
-    ) {
-
-      statusBox.textContent =
-        "Please select a video first.";
-
-      return;
-
-    }
-
-    const file =
-      videoFile.files[0];
-
-    convertButton.disabled = true;
-
-startTestStatus.textContent =
-  "CONVERT CLICK REACHED";
-
-    try {
-
-      statusBox.textContent =
-        "Uploading and converting video...\\n\\n" +
-        "Please wait.";
-
-
-      const result =
-        await convertVideo(file);
-
-
-      // --------------------------------------------
-      // Success
-      // --------------------------------------------
-
-      statusBox.innerHTML =
-        "Conversion completed successfully." +
-        "<br><br>" +
-
-        '<a href="' +
-        result.downloadUrl +
-        '">' +
-
-        "Download Converted Video" +
-
-        "</a>";
-
-    }
-
-
-    catch (error) {
-
-      console.log(
-        "Conversion failed:",
-        error
-      );
-
-
-      // --------------------------------------------
-      // Automatic recovery
-      // --------------------------------------------
-
-      statusBox.textContent =
-        "First conversion attempt failed.\\n\\n" +
-
-        "Reconnecting...\\n\\n" +
-
-        "The page will reload automatically in 2 seconds.";
-
-
-      /*await delay(2000);*/
-
-
-      // --------------------------------------------
-      // Reload as Version 2
-      // --------------------------------------------
-
-      /*window.location.href =
-        "/?version=2";*/
-
-        return;
-    }
-
-  }
-);
-
-</script>
-
-<iframe
-  src="/live-status"
-  style="
-    width:100%;
-    height:300px;
-    border:0;
-    border-radius:8px;
-    background:#111;
-  "
-></iframe>
-
-<script>
-(function () {
-
-  function updateLiveStatusBox() {
-
-    fetch("/live-status?time=" + Date.now())
-      .then(function (response) {
-        return response.text();
-      })
-      .then(function (text) {
-
-        var data;
-
-        try {
-          data = JSON.parse(text);
-        } catch (error) {
-          return;
-        }
-
-        var box =
-          document.getElementById("liveDebugBox");
-
-        if (!box) {
-          return;
-        }
-
-        box.textContent =
-          "LIVE SERVER STATUS\n\n" +
-          "Server: " +
-          data.server +
-          "\n" +
-          "Convert Request: " +
-          data.convertRequest +
-          "\n" +
-          "File Upload: " +
-          data.fileUpload +
-          "\n" +
-          "FFmpeg: " +
-          data.ffmpeg +
-          "\n" +
-          "Result: " +
-          data.result +
-          "\n\n" +
-          "Updated: " +
-          data.updatedAt;
-
-      })
-      .catch(function () {});
-
-  }
-
-  updateLiveStatusBox();
-
-  setInterval(
-    updateLiveStatusBox,
-    2000
-  );
-
-})();
-</script>
-
-<div
-  id="serverTestNotice"
-  style="
-    margin: 12px 0;
-    padding: 12px 15px;
-    border-radius: 8px;
-    background: #fff3cd;
-    color: #664d03;
-    border: 1px solid #ffecb5;
-    font-size: 14px;
-    line-height: 1.5;
-  "
->
-  ⚠️ <strong>সার্ভার পরীক্ষা চলছে</strong><br><br>
-  আপনার মূল ভিডিও কনভার্ট করার আগে একটি ছোট ভিডিও দিয়ে
-  সার্ভারটি পরীক্ষা করা হচ্ছে। ১–৫ সেকেন্ডের ভিডিও হলে ভালো।
-  এত ছোট ভিডিও না থাকলে আপনার কাছে থাকা যেকোনো ছোট ভিডিও
-  দিয়ে পরীক্ষা করতে পারেন।<br><br>
-  পরীক্ষা সফল হলে আপনি স্বাভাবিকভাবে Converter ব্যবহার করতে পারবেন।
-</div>
-
-<script>
-async function runMainPageAutomaticTest() {
-
-const notice =
-  document.getElementById(
-    "serverTestNotice"
-  );
-
-const serverTestState =
-  localStorage.getItem(
-    "serverTestState"
-  );
-
-if (
-  serverTestState ===
-  "READY"
-) {
-  if (notice) {
-    notice.style.display =
-      "none";
-  }
-}
-else if (
-  serverTestState ===
-  "FAIL_RELOAD"
-) {
-  if (notice) {
-    notice.innerHTML =
-      "🔄 <strong>সার্ভার প্রস্তুত হয়েছে বলে মনে হচ্ছে</strong><br><br>" +
-      "পেজটি পুনরায় লোড হয়েছে। " +
-      "আপনি চাইলে আরেকবার ছোট ভিডিও দিয়ে পরীক্ষা করে নিতে পারেন, " +
-      "অথবা সরাসরি আপনার ভিডিও কনভার্ট করতে পারেন.";
-
-    notice.style.background =
-      "#fff3cd";
-
-    notice.style.color =
-      "#664d03";
-
-    notice.style.borderColor =
-      "#ffecb5";
-  }
-}
-
-  try {
-
-    const videoResponse =
-      await fetch(
-        "/server-test-1sec.mp4?background-test=" +
-        Date.now(),
-        {
-          method: "GET",
-          cache: "no-store"
-        }
-      );
-
-    if (!videoResponse.ok) {
-      throw new Error(
-        "Test video HTTP " +
-        videoResponse.status
-      );
-    }
-
-    const videoBlob =
-      await videoResponse.blob();
-
-    const testFile =
-      new File(
-        [videoBlob],
-        "server-test-1sec.mp4",
-        {
-          type:
-            videoBlob.type ||
-            "video/mp4"
-        }
-      );
-
-    const formData =
-      new FormData();
-
-    formData.append(
-      "video",
-      testFile
-    );
-
-    const response =
-      await fetch(
-        "/convert",
-        {
-          method: "POST",
-          body: formData,
-          cache: "no-store"
-        }
-      );
-
-    if (!response.ok) {
-      throw new Error(
-        "Conversion HTTP " +
-        response.status
-      );
-    }
-
-    console.log(
-      "Main page automatic test: SUCCESS"
-    );
-
-localStorage.setItem(
-  "serverTestState",
-  "READY"
-);
-
-const notice =
-  document.getElementById(
-    "serverTestNotice"
-  );
-
-if (notice) {
-  notice.innerHTML =
-    "🎉 <strong>অভিনন্দন!</strong><br><br>" +
-    "সার্ভার সফলভাবে পরীক্ষা হয়েছে। " +
-    "এখন আপনি Converter স্বাভাবিকভাবে ব্যবহার করতে পারবেন।";
-
-  notice.style.background =
-    "#d1e7dd";
-
-  notice.style.color =
-    "#0f5132";
-
-  notice.style.borderColor =
-    "#badbcc";
-
-  setTimeout(
-    function () {
-      notice.style.display =
-        "none";
-    },
-    3000
-  );
-}
-
-  }
-
-  catch (error) {
-
-    console.log(
-      "Main page automatic test: FAILED",
-      error
-    );
-
-localStorage.setItem(
-  "serverTestState",
-  "FAIL_RELOAD"
-);
-
-    setTimeout(
-      function () {
-        window.location.reload();
-      },
-      2000
-    );
-
-  }
-
-}
-
-runMainPageAutomaticTest();
-</script>
-
-</body>
-
-</html>
-  `);
-
-});
-
-// --------------------------------------------------
-// Automatic Server Test Video
-// --------------------------------------------------
-
-app.get(
-  "/server-test-video",
-  (req, res) => {
-
-    const testVideo =
-      path.join(
-        __dirname,
-        "server-test-1sec.mp4"
-      );
-
-    if (
-      !fs.existsSync(
-        testVideo
-      )
-    ) {
-
-      return res
-        .status(404)
-        .send(
-          "Server test video not found."
-        );
-
-    }
-
-    res.set(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate"
-    );
-
-    return res.sendFile(
-      testVideo
-    );
-
-  }
-);
-
-app.get(
-  "/server-test.html",
-  (req, res) => {
-
-    return res.sendFile(
-      path.join(
-        __dirname,
-        "server-test.html"
-      )
-    );
-
-  }
-);
-
-app.get(
-  "/server-test-1sec.mp4",
-  (req, res) => {
-    return res.sendFile(
-      path.join(
-        __dirname,
-        "server-test-1sec.mp4"
-      )
-    );
-  }
-);
-
-// --------------------------------------------------
-// Video conversion
-// --------------------------------------------------
-
-app.post(
-  "/convert",
-
-  (req, res, next) => {
-
-    updateLiveStatus(
-      "convertRequest",
-      "Received"
-    );
-
-    updateLiveStatus(
-      "result",
-      "Waiting"
-    );
-
-    upload.single("video")(
-      req,
-      res,
-      function (error) {
-
-        if (error) {
-
-          console.error(
-            "UPLOAD ERROR:",
-            error
-          );
-
-          updateLiveStatus(
-            "fileUpload",
-            "FAILED"
-          );
-
-          updateLiveStatus(
-            "ffmpeg",
-            "Not started"
-          );
-
-          updateLiveStatus(
-            "result",
-            "Upload failed: " +
-            error.message
-          );
-
-          return res
-            .status(500)
-            .send(
-              "Upload failed: " +
-              error.message
-            );
-
-        }
-
-        next();
-
-      }
-    );
-
-  },
-
-  async (req, res) => {
-
-    if (!req.file) {
-
-      updateLiveStatus(
-        "fileUpload",
-        "Failed"
-      );
-
-      updateLiveStatus(
-        "result",
-        "Conversion failed"
-      );
-
-      return res
-        .status(400)
-        .send(
-          "No video file received."
-        );
-
-    }
-
-
-    updateLiveStatus(
-      "fileUpload",
-      "Received"
-    );
-
-
-    const inputFile =
-      req.file.path;
-
-    const originalName =
-      path.parse(
-        req.file.originalname
-      ).name;
-
-    const safeName =
-      originalName
-        .replace(
-          /[^a-zA-Z0-9_-]/g,
-          "_"
-        )
-        .slice(0, 100);
-
-    const outputName =
-      safeName +
-      "_144p_MPEG4.mp4";
-
-    const outputFile =
-      path.join(
-        OUTPUT_DIR,
-        outputName
-      );
-
+  return new Promise((resolve, reject) => {
 
     const ffmpegArgs = [
 
       "-y",
 
       "-i",
-      inputFile,
+      inputPath,
 
       "-vf",
       "scale=256:144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2",
@@ -1344,103 +100,901 @@ app.post(
       "-movflags",
       "+faststart",
 
-      outputFile
-
+      outputPath
     ];
 
 
-    updateLiveStatus(
+    console.log("Starting FFmpeg conversion...");
+
+
+    execFile(
       "ffmpeg",
-      "Running"
+      ffmpegArgs,
+      {
+        maxBuffer: 10 * 1024 * 1024
+      },
+      (error, stdout, stderr) => {
+
+        if (error) {
+
+          console.error(
+            "FFmpeg conversion failed."
+          );
+
+          console.error(
+            stderr.slice(-4000)
+          );
+
+          reject(
+            new Error(
+              "FFmpeg conversion failed.\n\n" +
+              stderr.slice(-4000)
+            )
+          );
+
+          return;
+        }
+
+
+        console.log(
+          "FFmpeg conversion completed."
+        );
+
+        resolve();
+      }
     );
 
+  });
+}
 
-    try {
 
-      await new Promise(
-        (resolve, reject) => {
+// ======================================================
+// Home page
+// ======================================================
 
-          execFile(
-            "ffmpeg",
-            ffmpegArgs,
-            {
-              maxBuffer:
-                10 * 1024 * 1024
-            },
+app.get("/", (req, res) => {
 
-            (
-              error,
-              stdout,
-              stderr
-            ) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
 
-             if (error) {
+<head>
 
-  console.error(
-    "FFmpeg error:"
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Button Phone Video Converter</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .box {
+      max-width: 600px;
+      margin: auto;
+      background: #1d1d1d;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-top: 0;
+    }
+
+    button,
+    input[type="file"] {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background: #1976d2;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 12px;
+      background: #292929;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    a {
+      color: #4db8ff;
+    }
+
+    hr {
+      margin: 25px 0;
+      border: 0;
+      border-top: 1px solid #444;
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+<div class="box">
+
+
+  <h1>
+    Button Phone Video Converter
+  </h1>
+
+
+  <p>
+    144p • MPEG-4 Part 2 • MP4 • 15 FPS • AAC mono 32 kbps
+  </p>
+
+
+  <hr>
+
+
+  <h3>
+    Local Video
+  </h3>
+
+
+  <input
+    type="file"
+    id="videoFile"
+    accept="video/*"
+  >
+
+
+  <button id="convertButton">
+    Convert Local Video
+  </button>
+
+
+  <hr>
+
+
+  <h3>
+    Google Drive
+  </h3>
+
+
+  <button id="driveButton">
+    Select Video from Google Drive
+  </button>
+
+
+  <div id="status">
+    JavaScript is starting...
+  </div>
+
+
+</div>
+
+
+<script src="https://accounts.google.com/gsi/client"></script>
+
+<script src="https://apis.google.com/js/api.js"></script>
+
+
+<script>
+
+
+const GOOGLE_CLIENT_ID =
+  ${JSON.stringify(GOOGLE_CLIENT_ID)};
+
+
+const GOOGLE_API_KEY =
+  ${JSON.stringify(GOOGLE_API_KEY)};
+
+
+const APP_ID =
+  ${JSON.stringify(GOOGLE_APP_ID)};
+
+
+const statusBox =
+  document.getElementById("status");
+
+
+const videoFile =
+  document.getElementById("videoFile");
+
+
+const convertButton =
+  document.getElementById("convertButton");
+
+
+const driveButton =
+  document.getElementById("driveButton");
+
+
+let pickerApiLoaded = false;
+
+let tokenClient = null;
+
+let accessToken = null;
+
+
+// ======================================================
+// Initial status
+// ======================================================
+
+statusBox.textContent =
+  "JavaScript is working successfully.\\n\\n" +
+  "Select a local video or use Google Drive.";
+
+
+// ======================================================
+// Local file selection
+// ======================================================
+
+videoFile.addEventListener(
+  "change",
+  function () {
+
+    if (
+      !videoFile.files ||
+      !videoFile.files.length
+    ) {
+
+      statusBox.textContent =
+        "No video selected.";
+
+      return;
+    }
+
+
+    const file =
+      videoFile.files[0];
+
+
+    statusBox.textContent =
+      "Video selected successfully.\\n\\n" +
+
+      "File: " +
+      file.name +
+
+      "\\n" +
+
+      "Size: " +
+      (
+        file.size /
+        1024 /
+        1024
+      ).toFixed(2) +
+
+      " MB\\n\\n" +
+
+      "Press Convert to start.";
+
+  }
+);
+
+
+// ======================================================
+// Small delay
+// ======================================================
+
+function sleep(ms) {
+
+  return new Promise(
+    resolve => setTimeout(resolve, ms)
   );
-
-  console.error(
-    stderr
-  );
-
-  updateLiveStatus(
-    "ffmpeg",
-    "FAILED"
-  );
-
-  updateLiveStatus(
-    "result",
-    "FFmpeg conversion failed"
-  );
-
-  reject(
-    new Error(
-      "FFmpeg conversion failed.\n\n" +
-      stderr.slice(-3000)
-    )
-  );
-
-  return;
 
 }
 
-              updateLiveStatus(
-                "ffmpeg",
-                "Completed"
-              );
 
-              resolve();
+// ======================================================
+// Local conversion with retry
+// ======================================================
 
-            }
+async function sendLocalConversion(file) {
 
-          );
+  for (
+    let attempt = 1;
+    attempt <= 3;
+    attempt++
+  ) {
 
+    try {
+
+      statusBox.textContent =
+        "Connecting to conversion server...\\n\\n" +
+        "Attempt " +
+        attempt +
+        " of 3";
+
+
+      // Wake/check server first.
+      await fetch(
+        "/health",
+        {
+          cache: "no-store"
         }
       );
 
 
-      if (
-        !fs.existsSync(
-          outputFile
-        )
-      ) {
+      const formData =
+        new FormData();
 
-        updateLiveStatus(
-          "result",
-          "Output file missing"
+      formData.append(
+        "video",
+        file
+      );
+
+
+      statusBox.textContent =
+        "Uploading video...\\n\\n" +
+        "Attempt " +
+        attempt +
+        " of 3";
+
+
+      const response =
+        await fetch(
+          "/convert",
+          {
+            method: "POST",
+            body: formData
+          }
         );
 
+
+      if (!response.ok) {
+
+        const errorText =
+          await response.text();
+
         throw new Error(
-          "FFmpeg finished but output file was not created."
+          errorText ||
+          "Server conversion failed."
         );
 
       }
 
 
-      updateLiveStatus(
-        "result",
-        "Conversion successful"
+      const result =
+        await response.json();
+
+
+      return result;
+
+    }
+
+    catch (error) {
+
+      console.log(
+        "Conversion attempt failed:",
+        error
+      );
+
+
+      if (attempt >= 3) {
+
+        throw error;
+
+      }
+
+
+      statusBox.textContent =
+        "Server connection interrupted.\\n\\n" +
+        "Retrying automatically...";
+
+
+      await sleep(2000);
+
+    }
+
+  }
+
+}
+
+
+// ======================================================
+// Local conversion button
+// ======================================================
+
+convertButton.addEventListener(
+  "click",
+  async function () {
+
+    if (
+      !videoFile.files ||
+      !videoFile.files.length
+    ) {
+
+      statusBox.textContent =
+        "Please select a video first.";
+
+      return;
+    }
+
+
+    const file =
+      videoFile.files[0];
+
+
+    convertButton.disabled = true;
+
+
+    try {
+
+      const result =
+        await sendLocalConversion(file);
+
+
+      statusBox.innerHTML =
+        "Conversion completed successfully.\\n\\n" +
+
+        '<a href="' +
+        result.downloadUrl +
+        '">' +
+
+        "Download Converted Video" +
+
+        "</a>";
+
+
+    }
+
+    catch (error) {
+
+      statusBox.textContent =
+        "Conversion failed.\\n\\n" +
+        error.message;
+
+    }
+
+
+    finally {
+
+      convertButton.disabled = false;
+
+    }
+
+  }
+);
+
+
+// ======================================================
+// Google Picker API
+// ======================================================
+
+function loadPickerApi() {
+
+  gapi.load(
+    "picker",
+    function () {
+
+      pickerApiLoaded = true;
+
+      console.log(
+        "Google Picker API loaded."
+      );
+
+    }
+  );
+
+}
+
+
+loadPickerApi();
+
+
+// ======================================================
+// Google Drive button
+// ======================================================
+
+driveButton.addEventListener(
+  "click",
+  function () {
+
+    if (!GOOGLE_CLIENT_ID) {
+
+      statusBox.textContent =
+        "Google Client ID is missing.";
+
+      return;
+    }
+
+
+    if (!GOOGLE_API_KEY) {
+
+      statusBox.textContent =
+        "Google API Key is missing.";
+
+      return;
+    }
+
+
+    statusBox.textContent =
+      "Opening Google Drive...\\n\\n" +
+      "Please wait.";
+
+
+    startGoogleLogin();
+
+  }
+);
+
+
+// ======================================================
+// Google login
+// ======================================================
+
+function startGoogleLogin() {
+
+  try {
+
+    tokenClient =
+      google.accounts.oauth2.initTokenClient({
+
+        client_id:
+          GOOGLE_CLIENT_ID,
+
+        scope:
+          "https://www.googleapis.com/auth/drive.file",
+
+        callback:
+          function (response) {
+
+            if (response.error) {
+
+              statusBox.textContent =
+                "Google authorization failed.\\n\\n" +
+                response.error;
+
+              return;
+            }
+
+
+            accessToken =
+              response.access_token;
+
+
+            statusBox.textContent =
+              "Google Drive connected.\\n\\n" +
+              "Opening file picker...";
+
+
+            openPicker();
+
+          }
+
+      });
+
+
+    tokenClient.requestAccessToken({
+      prompt: ""
+    });
+
+
+  }
+
+  catch (error) {
+
+    statusBox.textContent =
+      "Google authorization error.\\n\\n" +
+      error.message;
+
+  }
+
+}
+
+
+// ======================================================
+// Open Google Picker
+// ======================================================
+
+function openPicker() {
+
+  if (!pickerApiLoaded) {
+
+    statusBox.textContent =
+      "Google Picker is still loading.\\n\\n" +
+      "Please try again.";
+
+    return;
+  }
+
+
+  if (!accessToken) {
+
+    statusBox.textContent =
+      "Google access token is missing.";
+
+    return;
+  }
+
+
+  const videoView =
+    new google.picker.DocsView(
+      google.picker.ViewId.DOCS
+    );
+
+
+  videoView.setMimeTypes(
+    "video/mp4,video/x-msvideo,video/quicktime,video/webm,video/*"
+  );
+
+
+  const picker =
+    new google.picker.PickerBuilder()
+
+      .setDeveloperKey(
+        GOOGLE_API_KEY
+      )
+
+      .setAppId(
+        APP_ID
+      )
+
+      .setOAuthToken(
+        accessToken
+      )
+
+      .setOrigin(
+        window.location.protocol +
+        "//" +
+        window.location.host
+      )
+
+      .addView(
+        videoView
+      )
+
+      .setCallback(
+        pickerCallback
+      )
+
+      .enableFeature(
+        google.picker.Feature.NAV_HIDDEN
+      )
+
+      .build();
+
+
+  picker.setVisible(true);
+
+}
+
+
+// ======================================================
+// Google Picker callback
+// ======================================================
+
+function pickerCallback(data) {
+
+  if (
+    data.action ===
+    google.picker.Action.PICKED
+  ) {
+
+    const file =
+      data.docs[0];
+
+
+    const fileName =
+      file.name || "Google Drive video";
+
+
+    const fileId =
+      file.id || "";
+
+
+    statusBox.textContent =
+      "Google Drive video selected.\\n\\n" +
+
+      "File name: " +
+      fileName +
+
+      "\\n\\n" +
+
+      "Starting server download...";
+
+
+    downloadDriveVideo(
+      fileId,
+      fileName
+    );
+
+  }
+
+
+  else if (
+    data.action ===
+    google.picker.Action.CANCEL
+  ) {
+
+    statusBox.textContent =
+      "Google Drive picker cancelled.";
+
+  }
+
+}
+
+
+// ======================================================
+// Download Drive video to server
+// ======================================================
+
+async function downloadDriveVideo(
+  fileId,
+  fileName
+) {
+
+  if (!accessToken) {
+
+    statusBox.textContent =
+      "Google access token is missing.";
+
+    return;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        "/convert-drive",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            fileId:
+              fileId,
+
+            fileName:
+              fileName,
+
+            accessToken:
+              accessToken
+
+          })
+
+        }
+      );
+
+
+    if (!response.ok) {
+
+      const errorText =
+        await response.text();
+
+      throw new Error(
+        errorText ||
+        "Google Drive conversion failed."
+      );
+
+    }
+
+
+    const result =
+      await response.json();
+
+
+    statusBox.innerHTML =
+      "Google Drive conversion completed successfully.\\n\\n" +
+
+      '<a href="' +
+      result.downloadUrl +
+      '">' +
+
+      "Download Converted Video" +
+
+      "</a>";
+
+
+  }
+
+  catch (error) {
+
+    statusBox.textContent =
+      "Google Drive conversion failed.\\n\\n" +
+      error.message;
+
+  }
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>
+  `);
+
+});
+
+
+// ======================================================
+// Local conversion endpoint
+// ======================================================
+
+app.post(
+  "/convert",
+  upload.single("video"),
+  async (req, res) => {
+
+    if (!req.file) {
+
+      return res.status(400).send(
+        "No video file received."
+      );
+
+    }
+
+
+    const inputPath =
+      req.file.path;
+
+
+    const originalName =
+      path.basename(
+        req.file.originalname
+      );
+
+
+    const baseName =
+      safeBaseName(
+        originalName
+      );
+
+
+    const outputName =
+      baseName +
+      "_144p_MPEG4.mp4";
+
+
+    const outputPath =
+      path.join(
+        outputDir,
+        outputName
+      );
+
+
+    try {
+
+      await convertVideo(
+        inputPath,
+        outputPath
+      );
+
+
+      console.log(
+        "Local conversion completed:",
+        outputName
       );
 
 
@@ -1461,39 +1015,232 @@ app.post(
 
     }
 
+    catch (error) {
+
+      return res.status(500).send(
+        error.message
+      );
+
+    }
+
+    finally {
+
+      try {
+
+        fs.unlinkSync(
+          inputPath
+        );
+
+      }
+
+      catch (_) {}
+
+    }
+
+  }
+);
+
+
+// ======================================================
+// Google Drive conversion endpoint
+// ======================================================
+
+app.use(
+  express.json({
+    limit: "1mb"
+  })
+);
+
+
+app.post(
+  "/convert-drive",
+  async (req, res) => {
+
+    const {
+      fileId,
+      fileName,
+      accessToken
+    } = req.body;
+
+
+    if (
+      !fileId ||
+      !accessToken
+    ) {
+
+      return res.status(400).send(
+        "Google Drive file information is missing."
+      );
+
+    }
+
+
+    const safeName =
+      safeBaseName(
+        fileName || "drive_video"
+      );
+
+
+    const inputPath =
+      path.join(
+        uploadDir,
+        "drive_" +
+        Date.now() +
+        "_" +
+        safeName +
+        ".input"
+      );
+
+
+    const outputName =
+      safeName +
+      "_144p_MPEG4.mp4";
+
+
+    const outputPath =
+      path.join(
+        outputDir,
+        outputName
+      );
+
+
+    try {
+
+      console.log(
+        "Starting Google Drive download:",
+        safeName
+      );
+
+
+      const auth =
+        new google.auth.OAuth2();
+
+
+      auth.setCredentials({
+        access_token:
+          accessToken
+      });
+
+
+      const drive =
+        google.drive({
+          version: "v3",
+          auth
+        });
+
+
+      const response =
+        await drive.files.get(
+          {
+            fileId:
+              fileId,
+
+            alt:
+              "media"
+          },
+          {
+            responseType:
+              "stream"
+          }
+        );
+
+
+      await new Promise(
+        (resolve, reject) => {
+
+          const writer =
+            fs.createWriteStream(
+              inputPath
+            );
+
+
+          response.data
+            .on(
+              "error",
+              reject
+            )
+            .pipe(writer);
+
+
+          writer.on(
+            "finish",
+            resolve
+          );
+
+
+          writer.on(
+            "error",
+            reject
+          );
+
+        }
+      );
+
+
+      console.log(
+        "Google Drive download completed:",
+        safeName
+      );
+
+
+      await convertVideo(
+        inputPath,
+        outputPath
+      );
+
+
+      console.log(
+        "Google Drive conversion completed:",
+        outputName
+      );
+
+
+      return res.json({
+
+        success: true,
+
+        filename:
+          outputName,
+
+        downloadUrl:
+          "/download/" +
+          encodeURIComponent(
+            outputName
+          )
+
+      });
+
+    }
 
     catch (error) {
 
       console.error(
-        error
+        "Google Drive conversion error:"
       );
 
-      updateLiveStatus(
-        "result",
-        "Conversion failed"
+
+      console.error(
+        error.message
       );
 
-      return res
-        .status(500)
-        .send(
-          error.message
-        );
+
+      return res.status(500).send(
+        "Google Drive conversion failed.\n\n" +
+        error.message
+      );
 
     }
-
 
     finally {
 
       try {
 
         if (
-          fs.existsSync(
-            inputFile
-          )
+          fs.existsSync(inputPath)
         ) {
 
           fs.unlinkSync(
-            inputFile
+            inputPath
           );
 
         }
@@ -1508,9 +1255,9 @@ app.post(
 );
 
 
-// --------------------------------------------------
+// ======================================================
 // Download converted video
-// --------------------------------------------------
+// ======================================================
 
 app.get(
   "/download/:filename",
@@ -1518,29 +1265,24 @@ app.get(
 
     const filename =
       path.basename(
-        decodeURIComponent(
-          req.params.filename
-        )
+        req.params.filename
       );
+
 
     const filePath =
       path.join(
-        OUTPUT_DIR,
+        outputDir,
         filename
       );
 
 
     if (
-      !fs.existsSync(
-        filePath
-      )
+      !fs.existsSync(filePath)
     ) {
 
-      return res
-        .status(404)
-        .send(
-          "Converted file not found."
-        );
+      return res.status(404).send(
+        "Converted file not found."
+      );
 
     }
 
@@ -1554,13 +1296,28 @@ app.get(
 );
 
 
-// --------------------------------------------------
+// ======================================================
+// Health check
+// ======================================================
+
+app.get(
+  "/health",
+  (req, res) => {
+
+    res.json({
+      status: "ok"
+    });
+
+  }
+);
+
+
+// ======================================================
 // Start server
-// --------------------------------------------------
+// ======================================================
 
 app.listen(
   PORT,
-  "0.0.0.0",
   () => {
 
     console.log(
@@ -1570,4 +1327,3 @@ app.listen(
 
   }
 );
-// all code end
